@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fff'/%3E%3Cpath d='M8 15h48M8 49h48' stroke='%23cf3a32' stroke-width='4'/%3E%3Cpath d='M8 26h48M8 38h48' stroke='%233283cf' stroke-width='4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Playwrite+IN:wght@100..400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Tamma+2:wght@400&family=Comic+Neue:wght@400;700&display=swap">
 <style>
 :root {
   --bg: #f4f1ea;
@@ -21,7 +21,7 @@
   --brand-dark: #003a88;
   --brand-soft: #e7eefa;
   --danger: #b42318;
-  --comic: "Comic Sans MS", "Comic Sans", "Comic Neue", cursive;
+  --comic: "Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo Tamma 2", cursive;
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -136,14 +136,27 @@ textarea.input { height: auto; padding: 9px 12px; resize: vertical; line-height:
 }
 .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
 .seg svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
-.seg .swatch {
-  width: 15px; height: 12px; flex: none;
+.seg .swatch { width: 16px; height: 12px; flex: none; }
+.seg .swatch.four {
   background:
-    linear-gradient(var(--outer) 0 0) 0 0 / 100% 1.6px no-repeat,
-    linear-gradient(var(--inner) 0 0) 0 3.6px / 100% 1.6px no-repeat,
-    linear-gradient(var(--inner) 0 0) 0 6.8px / 100% 1.6px no-repeat,
-    linear-gradient(var(--outer) 0 0) 0 10.4px / 100% 1.6px no-repeat;
+    linear-gradient(#cf3a32 0 0) 0 0 / 100% 1.6px no-repeat,
+    linear-gradient(#3283cf 0 0) 0 3.6px / 100% 1.6px no-repeat,
+    linear-gradient(#3283cf 0 0) 0 6.8px / 100% 1.6px no-repeat,
+    linear-gradient(#cf3a32 0 0) 0 10.4px / 100% 1.6px no-repeat;
 }
+.seg .swatch.double {
+  background:
+    linear-gradient(#cf3a32 0 0) 0 2.4px / 100% 1.6px no-repeat,
+    linear-gradient(#3283cf 0 0) 0 8px / 100% 1.6px no-repeat;
+}
+.fade-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.fade-row { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.fade-row label { min-width: 42px; }
+.fade-row input {
+  width: 62px; height: 32px; padding: 0 6px 0 8px; text-align: right;
+  border: 1px solid var(--hair-strong); border-radius: 8px; background: #fff; color: var(--ink);
+}
+.fade-row input:focus { outline: 3px solid rgba(0, 74, 173, 0.25); border-color: var(--brand); }
 .slider { display: grid; gap: 4px; }
 .slider-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; font-weight: 600; }
 .slider-head output { font-size: 12.5px; font-weight: 500; color: var(--muted); }
@@ -245,8 +258,6 @@ details.more[open] summary { margin-bottom: 8px; }
   padding: 0 3mm; outline: none; cursor: text; caret-color: #004aad;
 }
 .blk.model .txt { color: var(--ws-ink); }
-.blk.t-grey .txt { color: #bfc6cf; }
-.blk.t-hollow .txt { color: transparent; -webkit-text-stroke: 0.022em #8a94a2; }
 .blk.t-dots .txt { color: transparent; }
 .blk .dots { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .blk.draw .frame { position: relative; background: #fff; border: 1.6px solid #3b4456; border-radius: 3mm; outline: none; }
@@ -342,7 +353,6 @@ details.more[open] summary { margin-bottom: 8px; }
 
       <div class="sec">
         <span class="lbl">Letters</span>
-        <div class="seg" data-key="font" role="group" aria-label="Font"></div>
         <div class="slider">
           <div class="slider-head"><label for="size">Size</label><output id="size-out" for="size"></output></div>
           <div class="range-row">
@@ -362,14 +372,15 @@ details.more[open] summary { margin-bottom: 8px; }
       </div>
 
       <div class="sec">
-        <span class="lbl">Tracing letters</span>
-        <div class="seg" data-key="trace" role="group" aria-label="Tracing letters"></div>
+        <span class="lbl">Fading</span>
         <label class="check"><input type="checkbox" data-key="fade"> Fade line by line</label>
+        <div class="fade-list" id="fade-list"></div>
+        <p class="hint" id="fade-hint">How dark each dotted line is. 100% is full dots; lower numbers give fewer, lighter dots; 0% leaves the line empty.</p>
       </div>
 
       <div class="sec">
         <span class="lbl">Lines</span>
-        <div class="seg" data-key="ink" role="group" aria-label="Line colours"></div>
+        <div class="seg" data-key="ruling" role="group" aria-label="Lines"></div>
         <label class="check"><input type="checkbox" data-key="marks"> Spacing marks</label>
         <label class="check"><input type="checkbox" data-key="fields"> Name and date</label>
         <label class="check"><input type="checkbox" data-key="logo"> School logo</label>
@@ -450,18 +461,15 @@ function svgEl(tag, attrs = {}) {
 let idCounter = 0;
 const newId = () => Date.now().toString(36) + (idCounter++).toString(36);
 
-/* ---------- Fonts, line colours and tracing styles ---------- */
-const COMIC = '"Comic Sans MS", "Comic Sans", "Comic Neue", cursive';
+/* ---------- Font, lines and dots ---------- */
+// Comic Sans for English; Baloo Tamma 2, a rounded Kannada font, fills in Kannada letters.
+const COMIC = '"Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo Tamma 2", cursive';
 const FONTS = {
   comic: { label: 'Comic Sans', css: COMIC, weight: 400, dotGap: 0.078, dotRadius: 0.021, spur: 0.05 },
-  cursive: { label: 'Cursive', css: '"Playwrite IN", cursive', weight: 300, dotGap: 0.075, dotRadius: 0.02, spur: 0.035 },
 };
-const INKS = {
-  classic: { label: 'Red & blue', outer: '#cf3a32', inner: '#3283cf' },
-  blue: { label: 'Blue', outer: '#2b5ea7', inner: '#86b3e0' },
-  grey: { label: 'Grey', outer: '#7c8592', inner: '#b6bdc7' },
-};
-const TRACES = { dots: 'Dotted', grey: 'Grey', hollow: 'Outline' };
+const LINE_INK = { outer: '#cf3a32', inner: '#3283cf' }; // red and blue
+const RULINGS = { four: 'Four lines', double: 'Double line' };
+const KANNADA = /[ಀ-೿]/;
 const ALIGNS = { left: 'Left', center: 'Centre', right: 'Right' };
 const ALIGN_ICONS = {
   left: 'M2 3.5h12M2 6.5h8M2 9.5h12M2 12.5h7',
@@ -576,15 +584,6 @@ const TEMPLATES = [
     }),
   },
   {
-    id: 'cursive', name: 'Cursive Writing', level: 'UKG and up',
-    desc: 'Joined letters on red and blue four lines.',
-    make: () => ({
-      font: 'cursive', size: 38,
-      head: { title: 'Cursive Writing', sub: 'Trace the letters. Keep small letters between the blue lines.' },
-      blocks: [writing('trace', 'a b c d e f g h i j k l m n o p q r s t u v w x y z', 1), writing('model', 'I love my school.', 1)],
-    }),
-  },
-  {
     id: 'blank', name: 'Blank Four Lines', level: 'Any class',
     desc: 'Plain four-line paper for any practice.',
     make: () => ({
@@ -599,8 +598,13 @@ const TEMPLATE_BY_ID = Object.fromEntries(TEMPLATES.map(template => [template.id
 const ENABLED = ['name'];
 const OFFERED = TEMPLATES.filter(template => ENABLED.includes(template.id));
 
-const SHEET_VERSION = 2;
-const BASE_SHEET = { v: SHEET_VERSION, font: 'comic', size: 40, space: 0.55, align: 'left', trace: 'dots', fade: false, ink: 'classic', marks: true, fields: true, logo: true, name: '', names: '' };
+const SHEET_VERSION = 3;
+const BASE_SHEET = {
+  v: SHEET_VERSION, font: 'comic', size: 40, space: 0.55, align: 'left', ruling: 'four',
+  // How dark each dotted line is, top to bottom, in percent (used when fade is on).
+  fade: false, fadeSteps: [100, 90, 80, 70, 60, 50],
+  marks: true, fields: true, logo: true, name: '', names: '',
+};
 const BASE_HEAD = { nameLabel: 'Name:', dateLabel: 'Date:' };
 
 function makeSheet(templateId) {
@@ -624,14 +628,16 @@ try {
 
 function isUsable(sheetState) {
   return sheetState && sheetState.v === SHEET_VERSION && Array.isArray(sheetState.blocks) &&
-    FONTS[sheetState.font] && INKS[sheetState.ink] && TRACES[sheetState.trace] && sheetState.head;
+    FONTS[sheetState.font] && sheetState.head;
 }
 function sheetFor(templateId) {
   if (!isUsable(store.sheets[templateId])) store.sheets[templateId] = makeSheet(templateId);
   const sheetState = store.sheets[templateId];
   // Settings added after a sheet was saved get their default value.
-  for (const key in BASE_SHEET) if (!(key in sheetState)) sheetState[key] = BASE_SHEET[key];
+  for (const key in BASE_SHEET) if (!(key in sheetState)) sheetState[key] = structuredClone(BASE_SHEET[key]);
   if (!ALIGNS[sheetState.align]) sheetState.align = 'left';
+  if (!RULINGS[sheetState.ruling]) sheetState.ruling = 'four';
+  if (!Array.isArray(sheetState.fadeSteps)) sheetState.fadeSteps = structuredClone(BASE_SHEET.fadeSteps);
   return sheetState;
 }
 let saveTimer = 0;
@@ -643,39 +649,60 @@ function save() {
 }
 
 /* ---------- Letter heights of each font ---------- */
+// asc: where the top line goes, xh: top of the letter body, desc: how far tails hang below the baseline.
+const SCRIPT_SAMPLES = {
+  latin: {
+    tall: [[...'bdhkl'], [...'BDEHKLT']], body: [...'xzvwu'], tails: [...'gjpqy'],
+    fallback: { asc: 0.76, xh: 0.52, desc: 0.22 },
+  },
+  // Kannada: letters with a talekattu (and vowel signs) reach the top line, the body sits on the
+  // two middle lines, and ottaksharas hang below the baseline.
+  kannada: {
+    tall: [['ಕ', 'ಗ', 'ತ', 'ದ', 'ನ', 'ಪ', 'ಯ', 'ರ', 'ವ', 'ಸ'], ['ಕಿ', 'ಕು', 'ಕೆ', 'ಕೊ', 'ಕೌ', 'ಕಂ']],
+    body: ['ಅ', 'ಉ', 'ಎ', 'ಒ', 'ಬ', 'ಣ', 'ಲ'], tails: ['ಕ್ಕ', 'ತ್ತ', 'ಪ್ಪ', 'ಲ್ಲ', 'ಮ್ಮ', 'ಸ್ತ', 'ನ್ನ'],
+    fallback: { asc: 0.74, xh: 0.59, desc: 0.41 },
+  },
+};
 const metrics = {};
 function measureFonts() {
   let changed = false;
   const context = document.createElement('canvas').getContext('2d');
+  const median = values => values.slice().sort((a, b) => a - b)[values.length >> 1];
+  const round = value => Math.round(value * 1000) / 1000;
   for (const [key, font] of Object.entries(FONTS)) {
     context.font = `${font.weight} 200px ${font.css}`;
-    const up = chars => [...chars].map(ch => context.measureText(ch).actualBoundingBoxAscent / 200);
-    const down = chars => [...chars].map(ch => context.measureText(ch).actualBoundingBoxDescent / 200);
-    const median = values => values.sort((a, b) => a - b)[values.length >> 1];
-    let measured = {
-      asc: Math.max(median(up('bdhkl')), median(up('BDEHKLT'))),
-      xh: median(up('xzvwu')),
-      desc: median(down('gjpqy')),
-    };
-    if (!(measured.asc > 0.2 && measured.xh > 0.1 && measured.desc > 0.05)) measured = { asc: 0.76, xh: 0.52, desc: 0.22 };
-    const before = metrics[key];
-    if (!before || Math.abs(before.asc - measured.asc) + Math.abs(before.xh - measured.xh) + Math.abs(before.desc - measured.desc) > 0.002) changed = true;
-    metrics[key] = measured;
+    const up = list => median(list.map(text => context.measureText(text).actualBoundingBoxAscent / 200));
+    const down = list => median(list.map(text => context.measureText(text).actualBoundingBoxDescent / 200));
+    const byScript = {};
+    for (const [script, sample] of Object.entries(SCRIPT_SAMPLES)) {
+      let measured = { asc: round(Math.max(...sample.tall.map(up))), xh: round(up(sample.body)), desc: round(down(sample.tails)) };
+      if (!(measured.asc > measured.xh && measured.xh > 0.1 && measured.desc > 0.05)) measured = sample.fallback;
+      byScript[script] = measured;
+    }
+    if (JSON.stringify(byScript) !== JSON.stringify(metrics[key])) changed = true;
+    metrics[key] = byScript;
   }
   return changed;
 }
 
-// Where the four lines go, in px, for a sheet's font and size.
+// Kannada words sit differently on the lines from English ones.
+function sheetScript(sheetState) {
+  const words = sheetState.blocks.map(block => (block.bind ? sheetState[block.bind] : block.text) || '');
+  return words.some(text => KANNADA.test(text)) ? 'kannada' : 'latin';
+}
+
+// Where the lines go, in px, for a sheet's font, size and script.
 function geometry(sheetState) {
   const font = FONTS[sheetState.font];
-  const fontMetrics = metrics[sheetState.font];
+  const script = sheetScript(sheetState);
+  const fontMetrics = metrics[sheetState.font][script];
   const fontPx = sheetState.size * PX_PER_PT;
   const asc = fontMetrics.asc * fontPx;
   const xh = fontMetrics.xh * fontPx;
   const desc = fontMetrics.desc * fontPx;
   const band = asc + desc;
   const gap = band * sheetState.space;
-  return { font, fontKey: sheetState.font, fontPx, asc, xh, desc, band, gap, period: band + gap };
+  return { font, fontKey: sheetState.font, script, fontPx, asc, xh, desc, band, gap, period: band + gap };
 }
 
 // Distance from the top of a line box to the text baseline, measured by the browser itself.
@@ -906,42 +933,48 @@ function dotPath(dots, originX, originY, fontPx, radius) {
   return d;
 }
 
-// Fading: each traced line down the page has fewer, smaller and lighter dots than the one above.
-const FADE_SPREAD = 1.2;   // the last traced line's dots are 2.2 times further apart
-const FADE_SHRINK = 0.1;   // ... a little smaller
-const FADE_LIGHTEN = 0.45; // ... and about half as dark
+// Fading: the teacher sets how dark each dotted line is (100% = full dots, 0% = no dots).
+// Lower strengths space the dots further apart, make them a little smaller and lighter.
+function fadePercent(sheetState, index) {
+  const steps = sheetState.fadeSteps;
+  const value = steps.length ? +steps[Math.min(index, steps.length - 1)] : 100;
+  return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 100;
+}
+function dotStyle(strength) {
+  const fade = 1 - strength;
+  return { spacing: Math.round((1 + 1.4 * fade) * 20) / 20, size: 1 - 0.15 * fade, opacity: 0.3 + 0.7 * strength };
+}
 
-// Each traced line (a name that wraps counts as one line) gets one step of the fade.
+// Each traced line (a name that wraps still counts as one line) gets its own strength.
 function paintTracing(sheetView) {
   const traced = $$('.blk.trace', sheetView.area);
-  const fading = sheetView.sheet.fade && traced.length > 1;
   traced.forEach((node, index) => {
-    const fade = fading ? index / (traced.length - 1) : 0;
-    if (node.querySelector('svg.dots')) paintDots(sheetView, node, () => fade);
-    else node.firstChild.style.opacity = fading ? (1 - 0.4 * fade).toFixed(2) : '';
+    const strength = sheetView.sheet.fade ? fadePercent(sheetView.sheet, index) / 100 : 1;
+    paintDots(sheetView, node, strength);
   });
+  sheetView.tracedLines = traced.length;
 }
 
 const charRange = document.createRange();
-function paintDots(sheetView, blockNode, fadeOf = () => 0) {
+function paintDots(sheetView, blockNode, strength = 1) {
   const svg = blockNode.querySelector('svg.dots');
   if (!svg) return;
+  svg.setAttribute('width', blockNode.offsetWidth);
+  svg.setAttribute('height', blockNode.offsetHeight);
+  if (strength <= 0) { svg.replaceChildren(); return; }
   const { g } = sheetView;
+  const style = dotStyle(strength);
   const words = blockNode.firstChild;
   const lineHeight = +blockNode.dataset.line;
   const baseline = +blockNode.dataset.baseline;
   const box = blockNode.getBoundingClientRect();
   const scale = box.width / blockNode.offsetWidth || 1;
-  const radius = Math.max(0.6, g.font.dotRadius * g.fontPx);
-  const pieces = new Map(); // line number -> path data
+  const radius = Math.max(0.6, g.font.dotRadius * g.fontPx) * style.size;
+  let d = '';
   let word = null;
   const flushWord = () => {
     if (!word) return;
-    const fade = fadeOf(word.line);
-    const spacing = Math.round((1 + FADE_SPREAD * fade) * 20) / 20;
-    const dots = glyphDots(g.fontKey, word.text, spacing);
-    const d = dotPath(dots, word.x, word.line * lineHeight + baseline, g.fontPx, radius * (1 - FADE_SHRINK * fade));
-    pieces.set(word.line, (pieces.get(word.line) || '') + d);
+    d += dotPath(glyphDots(g.fontKey, word.text, style.spacing), word.x, word.line * lineHeight + baseline, g.fontPx, radius);
     word = null;
   };
   const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
@@ -965,14 +998,8 @@ function paintDots(sheetView, blockNode, fadeOf = () => 0) {
     }
   }
   flushWord();
-  svg.setAttribute('width', blockNode.offsetWidth);
-  svg.setAttribute('height', blockNode.offsetHeight);
-  let markup = '';
-  for (const [line, d] of pieces) {
-    const opacity = 1 - FADE_LIGHTEN * fadeOf(line);
-    markup += `<path fill="${DOT_INK}"${opacity < 1 ? ` fill-opacity="${opacity.toFixed(2)}"` : ''} d="${d}"/>`;
-  }
-  svg.innerHTML = markup;
+  const opacity = style.opacity < 1 ? ` fill-opacity="${style.opacity.toFixed(2)}"` : '';
+  svg.innerHTML = d ? `<path fill="${DOT_INK}"${opacity} d="${d}"/>` : '';
 }
 
 /* ---------- Editable text ---------- */
@@ -1059,7 +1086,7 @@ function textBlock(sheetState, block, g, live) {
   const lineHeight = g.period * (1 + block.after);
   const baseline = baselineIn(g.font, g.fontPx, lineHeight);
   const traced = block.style === 'trace';
-  const blockNode = el('div', `blk text ${traced ? 'trace t-' + sheetState.trace : 'model'}`);
+  const blockNode = el('div', `blk text ${traced ? 'trace t-dots' : 'model'}`);
   blockNode.dataset.id = block.id;
   if (block.bind) blockNode.dataset.bind = block.bind;
   blockNode.dataset.line = lineHeight;
@@ -1076,7 +1103,7 @@ function textBlock(sheetState, block, g, live) {
   words.style.minHeight = lineHeight + 'px';
   words.style.textAlign = sheetState.align;
   blockNode.append(words);
-  if (traced && sheetState.trace === 'dots') blockNode.append(svgEl('svg', { class: 'dots', 'aria-hidden': 'true' }));
+  if (traced) blockNode.append(svgEl('svg', { class: 'dots', 'aria-hidden': 'true' }));
   if (live) {
     makeEditable(words, { singleLine: !!block.bind, placeholder: 'Type here', onChange: value => blockTextChanged(block, blockNode, value) });
   }
@@ -1107,7 +1134,6 @@ function layoutSheet(sheetView) {
   const width = area.clientWidth;
   const height = area.clientHeight - AREA_TOP;
   const bands = Math.max(0, Math.floor((height - 1 + g.gap) / g.period + 1e-6));
-  const ink = INKS[sheetState.ink];
   const round = value => Math.round(value * 100) / 100;
   // Lines under a picture box are left out.
   const covered = new Set();
@@ -1116,6 +1142,9 @@ function layoutSheet(sheetView) {
     const rows = Math.round(boxNode.offsetHeight / g.period);
     for (let row = 0; row < rows; row++) covered.add(first + row);
   }
+  // Four lines: red top, blue body top, blue baseline, red bottom.
+  // Double line: just the letter body, red on top and blue at the baseline.
+  const double = sheetState.ruling === 'double';
   let outer = '', inner = '', marks = '';
   const markStep = g.band * 0.62;
   for (let i = 0; i < bands; i++) {
@@ -1124,10 +1153,16 @@ function layoutSheet(sheetView) {
     const mid = top + g.asc - g.xh;
     const base = top + g.asc;
     const bottom = top + g.band;
-    outer += `M0 ${round(top)}H${width}M0 ${round(bottom)}H${width}`;
-    inner += `M0 ${round(mid)}H${width}M0 ${round(base)}H${width}`;
+    if (double) {
+      outer += `M0 ${round(mid)}H${width}`;
+      inner += `M0 ${round(base)}H${width}`;
+    } else {
+      outer += `M0 ${round(top)}H${width}M0 ${round(bottom)}H${width}`;
+      inner += `M0 ${round(mid)}H${width}M0 ${round(base)}H${width}`;
+    }
     if (sheetState.marks) {
-      for (let x = markStep; x < width - 2; x += markStep) marks += `M${round(x)} ${round(top)}V${round(bottom)}`;
+      const markTop = double ? mid : top, markBottom = double ? base : bottom;
+      for (let x = markStep; x < width - 2; x += markStep) marks += `M${round(x)} ${round(markTop)}V${round(markBottom)}`;
     }
   }
   const stroke = Math.min(1.7, Math.max(1.1, g.band / 42));
@@ -1136,8 +1171,8 @@ function layoutSheet(sheetView) {
   ruling.setAttribute('viewBox', `0 0 ${width} ${height}`);
   ruling.innerHTML =
     (marks ? `<path d="${marks}" stroke="${MARK_INK}" stroke-width="1" fill="none"/>` : '') +
-    `<path d="${inner}" stroke="${ink.inner}" stroke-width="${stroke}" fill="none"/>` +
-    `<path d="${outer}" stroke="${ink.outer}" stroke-width="${stroke}" fill="none"/>`;
+    `<path d="${inner}" stroke="${LINE_INK.inner}" stroke-width="${stroke}" fill="none"/>` +
+    `<path d="${outer}" stroke="${LINE_INK.outer}" stroke-width="${stroke}" fill="none"/>`;
   sheetView.bands = bands;
   fillPage(sheetView);
   paintTracing(sheetView);
@@ -1199,6 +1234,7 @@ function renderEditor() {
   fitPreview();
   layoutSheet(view);
   syncPanel();
+  syncFadeInputs();
 }
 
 function fitPreview() {
@@ -1237,6 +1273,23 @@ function blockTextChanged(block, blockNode, value) {
 function syncText(typedInto) {
   const view = editor.view;
   const sheetState = view.sheet;
+  if (sheetScript(sheetState) !== view.g.script) {
+    // Switching between English and Kannada moves the lines, so redraw the sheet
+    // and put the cursor back at the end of the line being typed in.
+    const id = typedInto && typedInto.dataset.id;
+    const position = id ? $$(`.blk[data-id="${id}"]`, view.area).indexOf(typedInto) : -1;
+    renderEditor();
+    if (id) {
+      const lines = $$(`.blk[data-id="${id}"] .txt`, editor.view.area);
+      const target = lines[Math.min(Math.max(position, 0), lines.length - 1)];
+      if (target) {
+        target.focus({ preventScroll: true });
+        getSelection().selectAllChildren(target);
+        getSelection().collapseToEnd();
+      }
+    }
+    return;
+  }
   for (const blockNode of $$('.blk.text', view.area)) {
     if (blockNode === typedInto) continue;
     const block = sheetState.blocks.find(item => item.id === blockNode.dataset.id);
@@ -1248,6 +1301,31 @@ function syncText(typedInto) {
   paintTracing(view);
   checkFit(view);
   placeTools();
+  syncFadeInputs();
+}
+
+// One percentage box per dotted line on the sheet.
+function syncFadeInputs() {
+  const sheetState = currentSheet();
+  const list = $('#fade-list');
+  const count = (editor.view && editor.view.tracedLines) || 0;
+  list.hidden = $('#fade-hint').hidden = !sheetState.fade || !count;
+  if (list.children.length !== count) {
+    list.replaceChildren();
+    for (let index = 0; index < count; index++) {
+      const row = el('div', 'fade-row');
+      const label = el('label', '', `Line ${index + 1}`);
+      const input = el('input');
+      Object.assign(input, { type: 'number', id: `fade-${index}`, min: 0, max: 100, step: 5, inputMode: 'numeric' });
+      input.dataset.index = index;
+      label.htmlFor = input.id;
+      row.append(label, input, el('span', '', '%'));
+      list.append(row);
+    }
+  }
+  for (const input of $$('input', list)) {
+    if (document.activeElement !== input) input.value = fadePercent(sheetState, +input.dataset.index);
+  }
 }
 
 function focusBlock(id, selectAll = false) {
@@ -1364,10 +1442,8 @@ function buildPanel() {
   }
 
   const choices = {
-    font: Object.fromEntries(Object.entries(FONTS).map(([key, font]) => [key, font.label])),
     align: ALIGNS,
-    trace: TRACES,
-    ink: Object.fromEntries(Object.entries(INKS).map(([key, ink]) => [key, ink.label])),
+    ruling: RULINGS,
   };
   for (const group of $$('.seg[data-key]')) {
     const key = group.dataset.key;
@@ -1375,13 +1451,7 @@ function buildPanel() {
       const button = el('button');
       button.type = 'button';
       button.dataset.value = value;
-      if (key === 'ink') {
-        const swatch = el('span', 'swatch');
-        swatch.style.setProperty('--outer', INKS[value].outer);
-        swatch.style.setProperty('--inner', INKS[value].inner);
-        button.append(swatch);
-      }
-      if (key === 'font') button.style.fontFamily = FONTS[value].css;
+      if (key === 'ruling') button.append(el('span', `swatch ${value}`));
       if (key === 'align') {
         const icon = svgEl('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true' });
         icon.append(svgEl('path', { d: ALIGN_ICONS[value] }));
@@ -1448,6 +1518,20 @@ function buildPanel() {
     updatePrintLabel();
     save();
   });
+  $('#fade-list').addEventListener('input', event => {
+    const input = event.target;
+    const value = Math.round(+input.value);
+    if (input.value === '' || !Number.isFinite(value)) return;
+    const sheetState = currentSheet();
+    const index = +input.dataset.index;
+    // Lines without their own number repeat the last one, so copy what is shown before changing this one.
+    const steps = sheetState.fadeSteps;
+    for (let i = steps.length; i < index; i++) steps[i] = fadePercent(sheetState, i);
+    steps[index] = Math.min(100, Math.max(0, value));
+    paintTracing(editor.view);
+    save();
+  });
+  $('#fade-list').addEventListener('change', syncFadeInputs);
 
   $('#add-text').addEventListener('click', () => insertBlock(writing('trace', 'Type here', 1), true));
   $('#add-box').addEventListener('click', () => insertBlock(pictureBox(4, 'Draw here.'), false));
@@ -1586,6 +1670,8 @@ function fontsReady() {
   if (!document.fonts || !document.fonts.load) return Promise.resolve();
   const loads = Object.values(FONTS).map(font => document.fonts.load(`${font.weight} 40px ${font.css}`, 'Abgx'));
   loads.push(document.fonts.load(`700 20px ${COMIC}`, 'Ab'));
+  loads.push(document.fonts.load('400 40px "Baloo Tamma 2"', 'ಕಅ')); // Kannada letters, so their heights are known
+
   return Promise.race([Promise.allSettled(loads), new Promise(resolve => setTimeout(resolve, 3000))]);
 }
 
