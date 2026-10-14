@@ -1,0 +1,1617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handwriting Worksheets · Anand Vidhya</title>
+<meta name="description" content="Make and print four-line handwriting worksheets for children: name tracing, patterns, letters, numbers, sentences and cursive.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fff'/%3E%3Cpath d='M8 15h48M8 49h48' stroke='%23cf3a32' stroke-width='4'/%3E%3Cpath d='M8 26h48M8 38h48' stroke='%233283cf' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Playwrite+IN:wght@100..400&display=swap">
+<style>
+:root {
+  --bg: #f4f1ea;
+  --surface: #ffffff;
+  --ink: #1b2333;
+  --muted: #667084;
+  --hair: #e4dfd4;
+  --hair-strong: #d2cbbc;
+  --brand: #004aad;
+  --brand-dark: #003a88;
+  --brand-soft: #e7eefa;
+  --danger: #b42318;
+  --comic: "Comic Sans MS", "Comic Sans", "Comic Neue", cursive;
+  --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: inherit; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  height: 60px; padding: 0 20px;
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--hair);
+}
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; }
+.brand img { height: 34px; width: auto; display: block; }
+.brand-divider { width: 1px; height: 26px; background: var(--hair-strong); flex: none; }
+.brand-text { font: 700 16px/1.1 var(--comic); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 38px; padding: 0 15px;
+  border: 1px solid var(--hair-strong); border-radius: 10px;
+  background: var(--surface); cursor: pointer;
+  font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap;
+}
+.btn:hover { border-color: #b9b19f; }
+.btn:focus-visible, .seg button:focus-visible, .icon-btn:focus-visible, .letters button:focus-visible {
+  outline: 3px solid rgba(0, 74, 173, 0.35); outline-offset: 1px;
+}
+.btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.btn-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+.btn-quiet { background: transparent; color: var(--muted); }
+.btn-quiet.confirm { color: var(--danger); border-color: var(--danger); }
+
+/* ---------- Gallery ---------- */
+.gallery { max-width: 1200px; margin: 0 auto; padding: 34px 20px 56px; }
+.hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px 32px; flex-wrap: wrap; }
+.hero h1 { font: 700 clamp(28px, 4vw, 38px)/1.1 var(--comic); margin: 0 0 8px; }
+.hero p { margin: 0; color: var(--muted); max-width: 60ch; font-size: 15.5px; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.steps li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 13px 7px 8px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--hair);
+  font-size: 13.5px; font-weight: 600;
+}
+.steps b {
+  display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--brand); color: #fff; font-size: 12px;
+}
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 22px; margin-top: 28px; }
+.card {
+  --thumb: 0.25;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; overflow: hidden;
+  text-decoration: none; color: inherit;
+  box-shadow: 0 1px 2px rgba(40, 30, 10, 0.05);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(40, 30, 10, 0.13); }
+.card:focus-visible { outline: 3px solid rgba(0, 74, 173, 0.4); outline-offset: 2px; }
+.thumb { background: #eeeae1; padding: 16px 0; display: flex; justify-content: center; }
+.paper {
+  position: relative; overflow: hidden; background: #fff;
+  width: calc(210mm * var(--thumb)); height: calc(297mm * var(--thumb));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 6px 16px rgba(0, 0, 0, 0.07);
+}
+.paper .page { position: absolute; left: 0; top: 0; transform: scale(var(--thumb)); transform-origin: 0 0; pointer-events: none; }
+.card-body { padding: 12px 14px 15px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.card-title { font: 700 16.5px/1.25 var(--comic); }
+.card-desc { font-size: 13.5px; color: var(--muted); }
+.chip {
+  align-self: flex-start; margin-top: auto; transform: translateY(7px);
+  font-size: 11.5px; font-weight: 650; color: var(--brand);
+  background: var(--brand-soft); border-radius: 999px; padding: 3px 9px;
+}
+.gallery-note { margin-top: 34px; font-size: 13px; color: var(--muted); text-align: center; }
+
+/* ---------- Editor ---------- */
+.editor { display: grid; grid-template-columns: 304px minmax(0, 1fr); align-items: start; }
+.panel {
+  position: sticky; top: 60px; height: calc(100vh - 60px); overflow-y: auto;
+  background: var(--surface); border-right: 1px solid var(--hair);
+  padding: 6px 18px 30px;
+}
+.sec { padding: 15px 0; border-bottom: 1px solid #efebe3; display: grid; gap: 10px; }
+.sec:last-child { border-bottom: 0; }
+.lbl { font-size: 11.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.input {
+  width: 100%; height: 40px; padding: 0 12px;
+  border: 1px solid var(--hair-strong); border-radius: 10px; background: #fff;
+}
+textarea.input { height: auto; padding: 9px 12px; resize: vertical; line-height: 1.5; }
+.input:focus { outline: 3px solid rgba(0, 74, 173, 0.25); border-color: var(--brand); }
+#child { font: 600 17px var(--comic); }
+.seg { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: #f1eee7; }
+.seg button {
+  flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 6px; border: 0; border-radius: 8px; background: transparent; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap;
+}
+.seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
+.seg svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.seg .swatch {
+  width: 15px; height: 12px; flex: none;
+  background:
+    linear-gradient(var(--outer) 0 0) 0 0 / 100% 1.6px no-repeat,
+    linear-gradient(var(--inner) 0 0) 0 3.6px / 100% 1.6px no-repeat,
+    linear-gradient(var(--inner) 0 0) 0 6.8px / 100% 1.6px no-repeat,
+    linear-gradient(var(--outer) 0 0) 0 10.4px / 100% 1.6px no-repeat;
+}
+.slider { display: grid; gap: 4px; }
+.slider-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; font-weight: 600; }
+.slider-head output { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.range-row { display: flex; align-items: center; gap: 8px; }
+input[type="range"] { width: 100%; accent-color: var(--brand); }
+.icon-btn {
+  flex: none; width: 30px; height: 30px; display: grid; place-items: center;
+  border: 1px solid var(--hair-strong); border-radius: 8px; background: #fff; cursor: pointer;
+  font-size: 17px; line-height: 1;
+}
+.check { display: flex; align-items: center; gap: 9px; font-size: 14px; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--brand); margin: 0; }
+.letters { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.letters button {
+  height: 32px; border: 1px solid var(--hair-strong); border-radius: 8px; background: #fff;
+  font: 700 15px var(--comic); cursor: pointer;
+}
+.letters button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.add-row .btn { padding: 0 8px; font-size: 13.5px; }
+details.more summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--brand); }
+details.more[open] summary { margin-bottom: 8px; }
+.hint { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+
+.stage { min-width: 0; padding: 16px 20px 48px; }
+.stage-bar {
+  display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
+  min-height: 30px; margin-bottom: 12px; font-size: 13px; color: var(--muted); text-align: center;
+}
+.warn { color: var(--danger); font-weight: 600; background: #fdecea; border-radius: 8px; padding: 4px 10px; }
+.stage-inner { position: relative; }
+.holder { position: relative; margin: 0 auto; }
+.holder > .page {
+  position: absolute; left: 0; top: 0; transform-origin: 0 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 14px 40px rgba(40, 30, 10, 0.14);
+}
+
+/* Floating options for the line being edited */
+.tools {
+  position: absolute; z-index: 20;
+  display: flex; align-items: center; gap: 2px; padding: 4px;
+  background: #1b2333; color: #fff; border-radius: 11px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  font-size: 12.5px; white-space: nowrap;
+}
+.tools { flex-wrap: wrap; max-width: 100%; }
+.tools .tg { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.tools button {
+  height: 30px; min-width: 30px; padding: 0 9px; border: 0; border-radius: 8px;
+  background: transparent; color: #fff; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.tools button:hover { background: rgba(255, 255, 255, 0.13); }
+.tools button[aria-pressed="true"] { background: #fff; color: #1b2333; }
+.tools .tl { opacity: 0.68; padding: 0 3px 0 7px; }
+.tools .sep { width: 1px; height: 18px; margin: 0 4px; background: rgba(255, 255, 255, 0.22); }
+.tools svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 900px) {
+  .editor { grid-template-columns: 1fr; }
+  .stage { order: -1; padding: 12px 12px 24px; }
+  .panel { position: static; height: auto; border-right: 0; border-top: 1px solid var(--hair); }
+}
+@media (max-width: 560px) {
+  .topbar { padding: 0 12px; gap: 10px; }
+  .brand-divider, .brand-text { display: none; }
+  .top-actions .btn { padding: 0 11px; }
+  .hide-small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none; }
+}
+
+/* ---------- The printed sheet (A4) ---------- */
+.page {
+  --ws-ink: #172036;
+  width: 210mm; height: 297mm; padding: 11mm 13mm 11mm;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: #fff; color: var(--ws-ink);
+  font-family: var(--comic);
+}
+.ws-head { display: flex; align-items: center; justify-content: space-between; gap: 8mm; min-height: 15mm; }
+.ws-titles { flex: 1; min-width: 0; }
+.ws-title { font-size: 23px; font-weight: 700; line-height: 1.2; min-height: 1.2em; color: #14203a; }
+.ws-sub { font-size: 13px; line-height: 1.35; min-height: 1.35em; margin-top: 3px; color: #586174; }
+.ws-logo { flex: none; width: 28.9mm; height: 15mm; object-fit: contain; }
+.ws-rule { border-top: 2px solid #1d3557; margin-top: 3.5mm; }
+.ws-fields { display: flex; justify-content: space-between; align-items: baseline; gap: 10mm; margin-top: 5mm; font-size: 14.5px; color: #3c4557; }
+.ws-field { display: flex; align-items: baseline; gap: 2mm; min-width: 0; }
+.ws-label { min-width: 1.5em; white-space: nowrap; }
+.ws-field .fill { display: inline-block; height: 1px; border-bottom: 1.3px solid #3c4557; }
+.ws-field.name .fill { width: 82mm; }
+.ws-field.date .fill { width: 36mm; }
+.ws-area { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; margin-top: 7mm; padding-top: 2px; }
+.ruling { position: absolute; left: 0; top: 2px; display: block; overflow: visible; }
+.blk { position: relative; }
+.blk.text .txt {
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: 0 3mm; outline: none; cursor: text; caret-color: #004aad;
+}
+.blk.model .txt { color: var(--ws-ink); }
+.blk.t-grey .txt { color: #bfc6cf; }
+.blk.t-hollow .txt { color: transparent; -webkit-text-stroke: 0.022em #8a94a2; }
+.blk.t-dots .txt { color: transparent; }
+.blk .dots { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.blk.draw .frame { position: relative; background: #fff; border: 1.6px solid #3b4456; border-radius: 3mm; outline: none; }
+.blk.draw .cap { position: absolute; left: 4mm; right: 4mm; top: 3mm; font-size: 14px; line-height: 1.3; color: #5f6878; }
+
+.probe { position: absolute; left: -10000px; top: 0; visibility: hidden; white-space: nowrap; }
+.probe span { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
+#batch { position: absolute; left: -10000px; top: 0; }
+
+@media screen {
+  .holder .ws-head [contenteditable]:hover, .holder .ws-fields [contenteditable]:hover, .holder .cap:hover,
+  .holder .ws-head [contenteditable]:focus, .holder .ws-fields [contenteditable]:focus, .holder .cap:focus {
+    background: rgba(0, 74, 173, 0.07); border-radius: 4px; outline: none;
+  }
+  .holder [contenteditable]:empty::before { content: attr(data-placeholder); color: #b3bac4; }
+  .holder .blk.draw .frame:focus { border-color: #004aad; }
+}
+
+@page { size: A4 portrait; margin: 0; }
+@media print {
+  html, body { background: #fff !important; }
+  .topbar, .gallery, .panel, .stage-bar, .tools, .probe { display: none !important; }
+  .editor:not([hidden]), .stage, .stage-inner { display: block !important; padding: 0 !important; margin: 0 !important; }
+  .holder { width: auto !important; height: auto !important; margin: 0 !important; }
+  .holder > .page, #batch > .page {
+    position: relative !important; transform: none !important; box-shadow: none !important;
+    break-after: page; page-break-after: always;
+  }
+  .holder > .page:last-child, #batch > .page:last-child { break-after: auto; page-break-after: auto; }
+  body.batch .editor { display: none !important; }
+  #batch { position: static; }
+  .page, .page * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#" aria-label="All worksheets">
+    <img src="logo.png" alt="Anand Vidhya" width="66" height="34">
+    <span class="brand-divider" aria-hidden="true"></span>
+    <span class="brand-text">Handwriting Worksheets</span>
+  </a>
+  <div class="top-actions" id="top-actions" hidden>
+    <a class="btn" href="#" id="all-sheets">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="5.5" height="5.5" rx="1.2"/><rect x="11.5" y="3" width="5.5" height="5.5" rx="1.2"/><rect x="3" y="11.5" width="5.5" height="5.5" rx="1.2"/><rect x="11.5" y="11.5" width="5.5" height="5.5" rx="1.2"/></svg>
+      <span class="hide-small">All worksheets</span>
+    </a>
+    <button class="btn btn-primary" id="print" type="button">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5.5 7.5V3h9v4.5M5.5 14H3.5V8.5a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1V14h-2"/><path d="M5.5 11.5h9V17h-9z"/></svg>
+      <span id="print-label">Print</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="gallery" id="gallery" hidden>
+    <div class="hero">
+      <div>
+        <h1>Handwriting worksheets</h1>
+        <p>Four-line practice sheets for little hands. Pick a sheet, change any words on it, and print it on A4 paper.</p>
+      </div>
+      <ol class="steps">
+        <li><b>1</b>Pick a sheet</li>
+        <li><b>2</b>Type a name or words</li>
+        <li><b>3</b>Print</li>
+      </ol>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="gallery-note">Your changes are saved in this browser. Printing works best in Chrome or Edge.</p>
+  </section>
+
+  <section class="editor" id="editor" hidden>
+    <aside class="panel" aria-label="Worksheet settings">
+      <div class="sec">
+        <label class="lbl" for="tpl">Worksheet</label>
+        <select class="input" id="tpl"></select>
+      </div>
+
+      <div class="sec" id="sec-name" hidden>
+        <label class="lbl" for="child">Child's name</label>
+        <input class="input" id="child" autocomplete="off" spellcheck="false">
+        <details class="more" id="class-box">
+          <summary>Print for the whole class</summary>
+          <textarea class="input" id="names" rows="6" placeholder="One name on each line" spellcheck="false"></textarea>
+          <p class="hint">Print makes one sheet for every name. Leave this empty to print only the sheet you see.</p>
+        </details>
+      </div>
+
+      <div class="sec" id="sec-letter" hidden>
+        <span class="lbl">Letter</span>
+        <div class="letters" id="letters"></div>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Letters</span>
+        <div class="seg" data-key="font" role="group" aria-label="Font"></div>
+        <div class="slider">
+          <div class="slider-head"><label for="size">Size</label><output id="size-out" for="size"></output></div>
+          <div class="range-row">
+            <button class="icon-btn" type="button" data-size="-2" aria-label="Smaller letters">−</button>
+            <input type="range" id="size" min="20" max="120" step="2">
+            <button class="icon-btn" type="button" data-size="2" aria-label="Bigger letters">+</button>
+          </div>
+        </div>
+        <div class="slider">
+          <div class="slider-head"><label for="space">Space between lines</label></div>
+          <input type="range" id="space" min="0.2" max="1.4" step="0.05">
+        </div>
+        <div class="slider">
+          <div class="slider-head"><span>Alignment</span></div>
+          <div class="seg" data-key="align" role="group" aria-label="Alignment"></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Tracing letters</span>
+        <div class="seg" data-key="trace" role="group" aria-label="Tracing letters"></div>
+        <label class="check"><input type="checkbox" data-key="fade"> Fade line by line</label>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Lines</span>
+        <div class="seg" data-key="ink" role="group" aria-label="Line colours"></div>
+        <label class="check"><input type="checkbox" data-key="marks"> Spacing marks</label>
+        <label class="check"><input type="checkbox" data-key="fields"> Name and date</label>
+        <label class="check"><input type="checkbox" data-key="logo"> School logo</label>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Add to the sheet</span>
+        <div class="add-row">
+          <button class="btn" type="button" id="add-text">+ Writing line</button>
+          <button class="btn" type="button" id="add-box">+ Picture box</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <button class="btn btn-quiet" type="button" id="reset">Reset this sheet</button>
+      </div>
+    </aside>
+
+    <div class="stage" id="stage">
+      <div class="stage-bar">
+        <span>Click any words on the sheet to change them.</span>
+        <span class="warn" id="fit-warn" hidden>Too much for one page. Make the letters smaller or remove a line.</span>
+      </div>
+      <div class="stage-inner" id="stage-inner">
+        <div class="holder" id="holder"></div>
+        <div class="tools" id="tools" role="toolbar" aria-label="Line options" hidden>
+          <div class="tg" data-for="text">
+            <button type="button" data-act="style" data-value="model">Solid</button>
+            <button type="button" data-act="style" data-value="trace">Trace</button>
+            <span class="sep"></span>
+            <span class="tl">Empty lines</span>
+            <button type="button" data-act="after" data-value="0">0</button>
+            <button type="button" data-act="after" data-value="1">1</button>
+            <button type="button" data-act="after" data-value="2">2</button>
+            <span class="sep"></span>
+            <button type="button" data-act="fill" title="Repeat this line down the page, keeping the last two lines empty">Fill page</button>
+          </div>
+          <div class="tg" data-for="draw">
+            <span class="tl">Box size</span>
+            <button type="button" data-act="rows" data-value="-1" aria-label="Smaller box">−</button>
+            <button type="button" data-act="rows" data-value="1" aria-label="Bigger box">+</button>
+          </div>
+          <span class="sep"></span>
+          <button type="button" data-act="move" data-value="-1" title="Move up" aria-label="Move up"><svg viewBox="0 0 16 16"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
+          <button type="button" data-act="move" data-value="1" title="Move down" aria-label="Move down"><svg viewBox="0 0 16 16"><path d="M8 3v10M4 9l4 4 4-4"/></svg></button>
+          <button type="button" data-act="copy" title="Duplicate" aria-label="Duplicate"><svg viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M3 10.5v-6A1.5 1.5 0 0 1 4.5 3h6"/></svg></button>
+          <button type="button" data-act="remove" title="Delete" aria-label="Delete"><svg viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.6 4.5l.6 8.5h5.6l.6-8.5"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="batch" aria-hidden="true"></div>
+<noscript><p style="padding:24px;text-align:center">Please turn on JavaScript to make worksheets.</p></noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- Small helpers ---------- */
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const PX_PER_PT = 96 / 72;
+const PX_PER_MM = 96 / 25.4;
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+function svgEl(tag, attrs = {}) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const name in attrs) node.setAttribute(name, attrs[name]);
+  return node;
+}
+let idCounter = 0;
+const newId = () => Date.now().toString(36) + (idCounter++).toString(36);
+
+/* ---------- Fonts, line colours and tracing styles ---------- */
+const COMIC = '"Comic Sans MS", "Comic Sans", "Comic Neue", cursive';
+const FONTS = {
+  comic: { label: 'Comic Sans', css: COMIC, weight: 400, dotGap: 0.078, dotRadius: 0.021, spur: 0.05 },
+  cursive: { label: 'Cursive', css: '"Playwrite IN", cursive', weight: 300, dotGap: 0.075, dotRadius: 0.02, spur: 0.035 },
+};
+const INKS = {
+  classic: { label: 'Red & blue', outer: '#cf3a32', inner: '#3283cf' },
+  blue: { label: 'Blue', outer: '#2b5ea7', inner: '#86b3e0' },
+  grey: { label: 'Grey', outer: '#7c8592', inner: '#b6bdc7' },
+};
+const TRACES = { dots: 'Dotted', grey: 'Grey', hollow: 'Outline' };
+const ALIGNS = { left: 'Left', center: 'Centre', right: 'Right' };
+const ALIGN_ICONS = {
+  left: 'M2 3.5h12M2 6.5h8M2 9.5h12M2 12.5h7',
+  center: 'M2 3.5h12M4 6.5h8M2 9.5h12M4.5 12.5h7',
+  right: 'M2 3.5h12M6 6.5h8M2 9.5h12M7 12.5h7',
+};
+const DOT_INK = '#6f7a89';
+const MARK_INK = '#e1e5ea';
+
+/* ---------- Worksheet templates ---------- */
+const writing = (style, text, after = 0, bind) => ({ type: 'text', style, text, after, ...(bind ? { bind } : {}) });
+const pictureBox = (rows, caption) => ({ type: 'draw', rows, caption });
+
+const LETTER_WORDS = {
+  A: 'ant apple arm', B: 'bat ball bus', C: 'cat cap cup', D: 'dog doll drum', E: 'egg ear eye',
+  F: 'fan fish frog', G: 'goat gift grapes', H: 'hat hen hut', I: 'ink idli igloo', J: 'jam jug jeep',
+  K: 'kite key king', L: 'lion leaf lamp', M: 'mango moon milk', N: 'nest net nose', O: 'owl ox orange',
+  P: 'pen pot parrot', Q: 'queen quilt quiet', R: 'rat rose rain', S: 'sun star ship', T: 'top tree tiger',
+  U: 'up uncle umbrella', V: 'van vase violin', W: 'web well watch', X: 'box fox six', Y: 'yak yarn yellow',
+  Z: 'zoo zip zebra',
+};
+const repeatWith = (text, count) => Array(count).fill(text).join('  ');
+function letterSheet(letter) {
+  const small = letter.toLowerCase();
+  return {
+    title: `Letter ${letter}${small}`,
+    blocks: [
+      writing('trace', repeatWith(letter, 6), 1),
+      writing('trace', repeatWith(small, 7), 1),
+      writing('trace', LETTER_WORDS[letter].split(' ').join('   '), 1),
+    ],
+  };
+}
+
+const TEMPLATES = [
+  {
+    id: 'name', name: 'My Name', level: 'Pre-KG to UKG',
+    desc: 'Dotted name lines that slowly fade, then two empty lines to write alone.',
+    make: () => ({
+      size: 64, name: 'Aarav', fade: true,
+      head: { title: 'My Name', sub: 'Trace over your name. Then write it on your own.' },
+      // One dotted line that repeats down the page, keeping the last two lines empty.
+      blocks: [{ ...writing('trace', '', 0, 'name'), fill: 2 }],
+    }),
+  },
+  {
+    id: 'patterns', name: 'Pattern Writing', level: 'Pre-KG',
+    desc: 'Standing, sleeping and slanting lines, curves and circles.',
+    make: () => ({
+      size: 40,
+      head: { title: 'Pattern Writing', sub: 'Trace the patterns. Then draw them on the empty line.' },
+      blocks: [
+        writing('trace', '|   |   |   |   |   |   |   |   |', 1),
+        writing('trace', '—  —  —  —  —  —  —', 1),
+        writing('trace', '/   /   /   /   /   /   /   /', 1),
+        writing('trace', '(   (   (   (     )   )   )   )', 1),
+        writing('trace', 'O   O   O   O   O   O', 1),
+      ],
+    }),
+  },
+  {
+    id: 'capitals', name: 'Capital Letters', level: 'LKG',
+    desc: 'A to Z to trace, with a practice line under each row.',
+    make: () => ({
+      size: 44,
+      head: { title: 'Capital Letters', sub: 'Trace each letter. Then write it on the empty line below.' },
+      blocks: [writing('trace', 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z', 1)],
+    }),
+  },
+  {
+    id: 'small', name: 'Small Letters', level: 'LKG to UKG',
+    desc: 'a to z, showing which letters go up and which go down.',
+    make: () => ({
+      size: 44,
+      head: { title: 'Small Letters', sub: 'Small letters sit between the blue lines. Tall letters touch the top line and tails touch the bottom line.' },
+      blocks: [writing('trace', 'a b c d e f g h i j k l m n o p q r s t u v w x y z', 1)],
+    }),
+  },
+  {
+    id: 'letter', name: 'Letter of the Day', level: 'LKG to UKG',
+    desc: 'One letter, big and small, with three words to trace.',
+    make: () => {
+      const { title, blocks } = letterSheet('A');
+      return { size: 48, letter: 'A', head: { title, sub: 'Trace the letters and the words. Then write them on your own.' }, blocks };
+    },
+  },
+  {
+    id: 'numbers', name: 'Numbers 1 to 10', level: 'LKG to UKG',
+    desc: 'Numbers and number names to trace and write.',
+    make: () => ({
+      size: 42,
+      head: { title: 'Numbers', sub: 'Trace the numbers and their names. Then write them on your own.' },
+      blocks: [writing('trace', '1  2  3  4  5  6  7  8  9  10', 1), writing('trace', 'one two three four five six seven eight nine ten', 1)],
+    }),
+  },
+  {
+    id: 'draw', name: 'Draw and Write', level: 'UKG',
+    desc: 'A picture box and a sentence to finish.',
+    make: () => ({
+      size: 32,
+      head: { title: 'Draw and Write', sub: 'Draw a picture in the box. Then trace and finish the sentence.' },
+      blocks: [pictureBox(5, 'Draw your favourite animal.'), writing('trace', 'My favourite animal is the', 1)],
+    }),
+  },
+  {
+    id: 'sentence', name: 'Sentence Practice', level: 'UKG and up',
+    desc: 'Copy each line onto the empty line below it.',
+    make: () => ({
+      size: 34, space: 0.6,
+      head: { title: 'Handwriting Practice', sub: 'Copy each line neatly on the empty line below it.' },
+      blocks: [writing('model', 'I go to Anand Vidhya. I love to read, sing, paint and play with my friends every day.', 1)],
+    }),
+  },
+  {
+    id: 'cursive', name: 'Cursive Writing', level: 'UKG and up',
+    desc: 'Joined letters on red and blue four lines.',
+    make: () => ({
+      font: 'cursive', size: 38,
+      head: { title: 'Cursive Writing', sub: 'Trace the letters. Keep small letters between the blue lines.' },
+      blocks: [writing('trace', 'a b c d e f g h i j k l m n o p q r s t u v w x y z', 1), writing('model', 'I love my school.', 1)],
+    }),
+  },
+  {
+    id: 'blank', name: 'Blank Four Lines', level: 'Any class',
+    desc: 'Plain four-line paper for any practice.',
+    make: () => ({
+      size: 34,
+      head: { title: 'Handwriting Practice', sub: 'Write neatly on the four lines.' },
+      blocks: [],
+    }),
+  },
+];
+const TEMPLATE_BY_ID = Object.fromEntries(TEMPLATES.map(template => [template.id, template]));
+// Worksheets offered on this page. With just one, the page opens straight into it (no gallery).
+const ENABLED = ['name'];
+const OFFERED = TEMPLATES.filter(template => ENABLED.includes(template.id));
+
+const SHEET_VERSION = 2;
+const BASE_SHEET = { v: SHEET_VERSION, font: 'comic', size: 40, space: 0.55, align: 'left', trace: 'dots', fade: false, ink: 'classic', marks: true, fields: true, logo: true, name: '', names: '' };
+const BASE_HEAD = { nameLabel: 'Name:', dateLabel: 'Date:' };
+
+function makeSheet(templateId) {
+  const made = TEMPLATE_BY_ID[templateId].make();
+  return {
+    ...structuredClone(BASE_SHEET),
+    ...made,
+    tpl: templateId,
+    head: { ...BASE_HEAD, ...made.head },
+    blocks: made.blocks.map(block => ({ ...block, id: newId() })),
+  };
+}
+
+/* ---------- Saved sheets (this browser only) ---------- */
+const STORE_KEY = 'anand-vidhya-worksheets';
+let store = { sheets: {}, last: 'name' };
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+  if (saved && typeof saved.sheets === 'object') store = { ...store, ...saved };
+} catch { /* storage blocked: work without saving */ }
+
+function isUsable(sheetState) {
+  return sheetState && sheetState.v === SHEET_VERSION && Array.isArray(sheetState.blocks) &&
+    FONTS[sheetState.font] && INKS[sheetState.ink] && TRACES[sheetState.trace] && sheetState.head;
+}
+function sheetFor(templateId) {
+  if (!isUsable(store.sheets[templateId])) store.sheets[templateId] = makeSheet(templateId);
+  const sheetState = store.sheets[templateId];
+  // Settings added after a sheet was saved get their default value.
+  for (const key in BASE_SHEET) if (!(key in sheetState)) sheetState[key] = BASE_SHEET[key];
+  if (!ALIGNS[sheetState.align]) sheetState.align = 'left';
+  return sheetState;
+}
+let saveTimer = 0;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* full or blocked */ }
+  }, 250);
+}
+
+/* ---------- Letter heights of each font ---------- */
+const metrics = {};
+function measureFonts() {
+  let changed = false;
+  const context = document.createElement('canvas').getContext('2d');
+  for (const [key, font] of Object.entries(FONTS)) {
+    context.font = `${font.weight} 200px ${font.css}`;
+    const up = chars => [...chars].map(ch => context.measureText(ch).actualBoundingBoxAscent / 200);
+    const down = chars => [...chars].map(ch => context.measureText(ch).actualBoundingBoxDescent / 200);
+    const median = values => values.sort((a, b) => a - b)[values.length >> 1];
+    let measured = {
+      asc: Math.max(median(up('bdhkl')), median(up('BDEHKLT'))),
+      xh: median(up('xzvwu')),
+      desc: median(down('gjpqy')),
+    };
+    if (!(measured.asc > 0.2 && measured.xh > 0.1 && measured.desc > 0.05)) measured = { asc: 0.76, xh: 0.52, desc: 0.22 };
+    const before = metrics[key];
+    if (!before || Math.abs(before.asc - measured.asc) + Math.abs(before.xh - measured.xh) + Math.abs(before.desc - measured.desc) > 0.002) changed = true;
+    metrics[key] = measured;
+  }
+  return changed;
+}
+
+// Where the four lines go, in px, for a sheet's font and size.
+function geometry(sheetState) {
+  const font = FONTS[sheetState.font];
+  const fontMetrics = metrics[sheetState.font];
+  const fontPx = sheetState.size * PX_PER_PT;
+  const asc = fontMetrics.asc * fontPx;
+  const xh = fontMetrics.xh * fontPx;
+  const desc = fontMetrics.desc * fontPx;
+  const band = asc + desc;
+  const gap = band * sheetState.space;
+  return { font, fontKey: sheetState.font, fontPx, asc, xh, desc, band, gap, period: band + gap };
+}
+
+// Distance from the top of a line box to the text baseline, measured by the browser itself.
+let probe = null;
+const baselineCache = new Map();
+function baselineIn(font, fontPx, lineHeight) {
+  const key = `${font.css}|${font.weight}|${fontPx}|${lineHeight}`;
+  if (baselineCache.has(key)) return baselineCache.get(key);
+  if (!probe) {
+    probe = el('div', 'probe');
+    probe.innerHTML = 'Hg<span></span>';
+    document.body.append(probe);
+  }
+  Object.assign(probe.style, { fontFamily: font.css, fontWeight: font.weight, fontSize: fontPx + 'px', lineHeight: lineHeight + 'px' });
+  const baseline = probe.lastChild.getBoundingClientRect().top - probe.getBoundingClientRect().top;
+  baselineCache.set(key, baseline);
+  return baseline;
+}
+
+/* ---------- Dotted letters ----------
+   Each word is drawn on a canvas, thinned to a
+   one-pixel centre line, and dots are spaced evenly along that line. */
+const RASTER_PX = 160;
+const skeletonCache = new Map();
+const dotCache = new Map();
+const NO_DOTS = new Float32Array(0);
+let rasterContext = null;
+
+// The one-pixel centre line of a word, kept so lines with different dot spacing can share it.
+function wordSkeleton(fontKey, text) {
+  const cacheKey = fontKey + '|' + text;
+  if (skeletonCache.has(cacheKey)) return skeletonCache.get(cacheKey);
+  const font = FONTS[fontKey];
+  if (!rasterContext) rasterContext = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const canvas = rasterContext.canvas;
+  const fontCss = `${font.weight} ${RASTER_PX}px ${font.css}`;
+  rasterContext.font = fontCss;
+  const box = rasterContext.measureText(text);
+  const pad = 4;
+  const originX = Math.ceil(box.actualBoundingBoxLeft || 0) + pad;
+  const originY = Math.ceil(box.actualBoundingBoxAscent || 0) + pad;
+  const width = originX + Math.ceil(box.actualBoundingBoxRight || 0) + pad;
+  const height = originY + Math.ceil(box.actualBoundingBoxDescent || 0) + pad;
+  let shape = null;
+  if (width > 2 * pad && height > 2 * pad && width < 12000) {
+    canvas.width = width;
+    canvas.height = height;
+    rasterContext.font = fontCss;
+    rasterContext.fillStyle = '#000';
+    rasterContext.fillText(text, originX, originY);
+    const rgba = rasterContext.getImageData(0, 0, width, height).data;
+    const ink = new Uint8Array(width * height);
+    for (let i = 0; i < ink.length; i++) ink[i] = rgba[i * 4 + 3] > 127 ? 1 : 0;
+    shape = { pixels: Int32Array.from(thinToCentreLine(ink, width, height)), width, height, originX, originY };
+  }
+  if (skeletonCache.size > 800) skeletonCache.clear();
+  skeletonCache.set(cacheKey, shape);
+  return shape;
+}
+
+// Dot centres for a word in em units from its baseline origin. spacing > 1 spreads the dots out.
+function glyphDots(fontKey, text, spacing = 1) {
+  const cacheKey = `${fontKey}|${spacing}|${text}`;
+  const cached = dotCache.get(cacheKey);
+  if (cached) return cached;
+  const shape = wordSkeleton(fontKey, text);
+  let dots = NO_DOTS;
+  if (shape) {
+    const font = FONTS[fontKey];
+    const ink = new Uint8Array(shape.width * shape.height);
+    for (const i of shape.pixels) ink[i] = 1;
+    const points = dotsAlongCentreLine(ink, shape.pixels, shape.width, font.dotGap * spacing * RASTER_PX, font.spur * RASTER_PX);
+    dots = new Float32Array(points.length);
+    for (let i = 0; i < points.length; i += 2) {
+      dots[i] = (points[i] + 0.5 - shape.originX) / RASTER_PX;
+      dots[i + 1] = (points[i + 1] + 0.5 - shape.originY) / RASTER_PX;
+    }
+  }
+  if (dotCache.size > 2000) dotCache.clear();
+  dotCache.set(cacheKey, dots);
+  return dots;
+}
+
+// Zhang-Suen thinning, then removal of corner pixels so every line pixel has two neighbours.
+function thinToCentreLine(ink, width, height) {
+  let pixels = [];
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1, i = y * width + 1; x < width - 1; x++, i++) if (ink[i]) pixels.push(i);
+  }
+  const removable = [];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let pass = 0; pass < 2; pass++) {
+      removable.length = 0;
+      for (const i of pixels) {
+        if (!ink[i]) continue;
+        const n = ink[i - width], ne = ink[i - width + 1], e = ink[i + 1], se = ink[i + width + 1];
+        const s = ink[i + width], sw = ink[i + width - 1], w = ink[i - 1], nw = ink[i - width - 1];
+        const neighbours = n + ne + e + se + s + sw + w + nw;
+        if (neighbours < 2 || neighbours > 6) continue;
+        const transitions = (!n && ne) + (!ne && e) + (!e && se) + (!se && s) + (!s && sw) + (!sw && w) + (!w && nw) + (!nw && n);
+        if (transitions !== 1) continue;
+        if (pass === 0 ? (n && e && s) || (e && s && w) : (n && e && w) || (n && s && w)) continue;
+        removable.push(i);
+      }
+      if (removable.length) {
+        changed = true;
+        for (const i of removable) ink[i] = 0;
+      }
+    }
+    if (changed) pixels = pixels.filter(i => ink[i]);
+  }
+  for (const i of pixels) {
+    const e = ink[i + 1], ne = ink[i - width + 1], n = ink[i - width], nw = ink[i - width - 1];
+    const w = ink[i - 1], sw = ink[i + width - 1], s = ink[i + width], se = ink[i + width + 1];
+    if (e + ne + n + nw + w + sw + s + se < 2) continue;
+    const E = 1 - e, NE = 1 - ne, N = 1 - n, NW = 1 - nw, W = 1 - w, SW = 1 - sw, S = 1 - s, SE = 1 - se;
+    // Yokoi connectivity number: 1 means the pixel can go without splitting the line.
+    if ((E - E * NE * N) + (N - N * NW * W) + (W - W * SW * S) + (S - S * SE * E) === 1) ink[i] = 0;
+  }
+  return pixels.filter(i => ink[i]);
+}
+
+function dotsAlongCentreLine(ink, skeleton, width, gap, spurLength) {
+  const offsets = [-width - 1, -width, -width + 1, -1, 1, width - 1, width, width + 1];
+  const degree = new Uint8Array(ink.length);
+  for (const i of skeleton) {
+    let count = 0;
+    for (const offset of offsets) count += ink[i + offset];
+    degree[i] = count;
+  }
+  const seen = new Uint8Array(ink.length);
+  const dots = [];
+  const tooCloseSq = (gap * 0.6) ** 2;
+  const addDot = (x, y) => {
+    for (let k = 0; k < dots.length; k += 2) {
+      const dx = dots[k] - x, dy = dots[k + 1] - y;
+      if (dx * dx + dy * dy < tooCloseSq) return;
+    }
+    dots.push(x, y);
+  };
+  const colOf = i => i % width;
+  const rowOf = i => (i - (i % width)) / width;
+  const placeAlong = (path, closed) => {
+    const count = path.length;
+    const distance = new Float64Array(count);
+    for (let k = 1; k < count; k++) {
+      distance[k] = distance[k - 1] + Math.hypot(colOf(path[k]) - colOf(path[k - 1]), rowOf(path[k]) - rowOf(path[k - 1]));
+    }
+    let total = distance[count - 1];
+    if (closed) total += Math.hypot(colOf(path[0]) - colOf(path[count - 1]), rowOf(path[0]) - rowOf(path[count - 1]));
+    if (total < 1e-6) { addDot(colOf(path[0]), rowOf(path[0])); return; }
+    const segments = Math.max(closed ? 3 : 1, Math.round(total / gap));
+    const stops = closed ? segments : segments + 1;
+    let k = 0;
+    for (let q = 0; q < stops; q++) {
+      const target = (total * q) / segments;
+      while (k < count - 1 && distance[k + 1] < target) k++;
+      const from = path[k];
+      const to = k + 1 < count ? path[k + 1] : path[0];
+      const start = distance[k];
+      const end = k + 1 < count ? distance[k + 1] : total;
+      const t = end > start ? Math.min(1, (target - start) / (end - start)) : 0;
+      addDot(colOf(from) + (colOf(to) - colOf(from)) * t, rowOf(from) + (rowOf(to) - rowOf(from)) * t);
+    }
+  };
+  // Strokes that start or end somewhere: walk from every end point and junction.
+  for (const start of skeleton) {
+    const startDegree = degree[start];
+    if (startDegree === 2) continue;
+    if (startDegree === 0) { addDot(colOf(start), rowOf(start)); continue; }
+    for (const offset of offsets) {
+      let current = start + offset;
+      if (!ink[current]) continue;
+      if (degree[current] === 2 ? seen[current] : current < start) continue;
+      const path = [start];
+      let previous = start;
+      for (;;) {
+        path.push(current);
+        if (degree[current] !== 2) break;
+        seen[current] = 1;
+        let next = -1;
+        for (const step of offsets) {
+          const j = current + step;
+          if (ink[j] && j !== previous) { next = j; break; }
+        }
+        if (next < 0 || (degree[next] === 2 && seen[next])) break;
+        previous = current;
+        current = next;
+      }
+      const endDegree = degree[path[path.length - 1]];
+      const isSpur = path.length < spurLength && ((startDegree === 1 && endDegree >= 3) || (startDegree >= 3 && endDegree === 1));
+      if (!isSpur) placeAlong(path, false);
+    }
+  }
+  // Closed loops such as o and 0.
+  for (const start of skeleton) {
+    if (degree[start] !== 2 || seen[start]) continue;
+    const path = [start];
+    seen[start] = 1;
+    let current = start;
+    for (;;) {
+      let next = -1;
+      for (const offset of offsets) {
+        const j = current + offset;
+        if (ink[j] && !seen[j] && degree[j] === 2) { next = j; break; }
+      }
+      if (next < 0) break;
+      seen[next] = 1;
+      path.push(next);
+      current = next;
+    }
+    placeAlong(path, true);
+  }
+  return dots;
+}
+
+function dotPath(dots, originX, originY, fontPx, radius) {
+  const r = radius.toFixed(2);
+  const across = (radius * 2).toFixed(2);
+  let d = '';
+  for (let i = 0; i < dots.length; i += 2) {
+    const x = originX + dots[i] * fontPx - radius;
+    const y = originY + dots[i + 1] * fontPx;
+    d += `M${x.toFixed(2)} ${y.toFixed(2)}a${r} ${r} 0 1 0 ${across} 0a${r} ${r} 0 1 0 -${across} 0`;
+  }
+  return d;
+}
+
+// Fading: each traced line down the page has fewer, smaller and lighter dots than the one above.
+const FADE_SPREAD = 1.2;   // the last traced line's dots are 2.2 times further apart
+const FADE_SHRINK = 0.1;   // ... a little smaller
+const FADE_LIGHTEN = 0.45; // ... and about half as dark
+
+// Each traced line (a name that wraps counts as one line) gets one step of the fade.
+function paintTracing(sheetView) {
+  const traced = $$('.blk.trace', sheetView.area);
+  const fading = sheetView.sheet.fade && traced.length > 1;
+  traced.forEach((node, index) => {
+    const fade = fading ? index / (traced.length - 1) : 0;
+    if (node.querySelector('svg.dots')) paintDots(sheetView, node, () => fade);
+    else node.firstChild.style.opacity = fading ? (1 - 0.4 * fade).toFixed(2) : '';
+  });
+}
+
+const charRange = document.createRange();
+function paintDots(sheetView, blockNode, fadeOf = () => 0) {
+  const svg = blockNode.querySelector('svg.dots');
+  if (!svg) return;
+  const { g } = sheetView;
+  const words = blockNode.firstChild;
+  const lineHeight = +blockNode.dataset.line;
+  const baseline = +blockNode.dataset.baseline;
+  const box = blockNode.getBoundingClientRect();
+  const scale = box.width / blockNode.offsetWidth || 1;
+  const radius = Math.max(0.6, g.font.dotRadius * g.fontPx);
+  const pieces = new Map(); // line number -> path data
+  let word = null;
+  const flushWord = () => {
+    if (!word) return;
+    const fade = fadeOf(word.line);
+    const spacing = Math.round((1 + FADE_SPREAD * fade) * 20) / 20;
+    const dots = glyphDots(g.fontKey, word.text, spacing);
+    const d = dotPath(dots, word.x, word.line * lineHeight + baseline, g.fontPx, radius * (1 - FADE_SHRINK * fade));
+    pieces.set(word.line, (pieces.get(word.line) || '') + d);
+    word = null;
+  };
+  const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.data;
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      const length = code >= 0xd800 && code < 0xdc00 && i + 1 < text.length ? 2 : 1;
+      const ch = text.slice(i, i + length);
+      if (/\s/.test(ch)) { flushWord(); continue; }
+      charRange.setStart(node, i);
+      charRange.setEnd(node, i + length);
+      const rect = charRange.getClientRects()[0];
+      i += length - 1;
+      if (!rect) continue;
+      const x = (rect.left - box.left) / scale;
+      const line = Math.floor(((rect.top + rect.bottom) / 2 - box.top) / scale / lineHeight);
+      // Whole words are dotted together so joined letters (cursive, ——) stay one stroke.
+      if (word && word.line === line) word.text += ch;
+      else { flushWord(); word = { text: ch, x, line }; }
+    }
+  }
+  flushWord();
+  svg.setAttribute('width', blockNode.offsetWidth);
+  svg.setAttribute('height', blockNode.offsetHeight);
+  let markup = '';
+  for (const [line, d] of pieces) {
+    const opacity = 1 - FADE_LIGHTEN * fadeOf(line);
+    markup += `<path fill="${DOT_INK}"${opacity < 1 ? ` fill-opacity="${opacity.toFixed(2)}"` : ''} d="${d}"/>`;
+  }
+  svg.innerHTML = markup;
+}
+
+/* ---------- Editable text ---------- */
+const EDIT_MODE = (() => {
+  const test = document.createElement('div');
+  try { test.contentEditable = 'plaintext-only'; } catch { return 'true'; }
+  return test.contentEditable === 'plaintext-only' ? 'plaintext-only' : 'true';
+})();
+
+function readText(node, singleLine) {
+  let value = node.innerText.replace(/\r/g, '');
+  if (value.endsWith('\n') && node.lastChild && node.lastChild.nodeName === 'BR') value = value.slice(0, -1);
+  return singleLine ? value.replace(/\n+/g, ' ') : value;
+}
+
+function makeEditable(node, { singleLine = false, placeholder = '', onChange }) {
+  node.contentEditable = EDIT_MODE;
+  node.spellcheck = false;
+  if (placeholder) node.dataset.placeholder = placeholder;
+  node.addEventListener('input', () => onChange(readText(node, singleLine)));
+  node.addEventListener('keydown', event => {
+    if (event.key === 'Escape' || (event.key === 'Enter' && singleLine)) {
+      event.preventDefault();
+      node.blur();
+    }
+  });
+  node.addEventListener('paste', event => {
+    event.preventDefault();
+    let pasted = (event.clipboardData || window.clipboardData).getData('text/plain') || '';
+    pasted = pasted.replace(/\r\n?/g, '\n');
+    if (singleLine) pasted = pasted.replace(/\s*\n\s*/g, ' ');
+    document.execCommand('insertText', false, pasted);
+  });
+}
+
+/* ---------- Building a sheet ---------- */
+function buildSheet(sheetState, live) {
+  const g = geometry(sheetState);
+  const page = el('div', 'page');
+  const head = el('div', 'ws-head');
+  const titles = el('div', 'ws-titles');
+  titles.append(
+    headText(sheetState.head, 'title', 'ws-title', live, 'Title'),
+    headText(sheetState.head, 'sub', 'ws-sub', live, 'Instructions'),
+  );
+  head.append(titles);
+  if (sheetState.logo) {
+    const logo = el('img', 'ws-logo');
+    logo.src = 'logo.png';
+    logo.alt = 'Anand Vidhya';
+    head.append(logo);
+  }
+  page.append(head, el('div', 'ws-rule'));
+  if (sheetState.fields) {
+    const fields = el('div', 'ws-fields');
+    fields.append(blankField(sheetState.head, 'nameLabel', 'name', live), blankField(sheetState.head, 'dateLabel', 'date', live));
+    page.append(fields);
+  }
+  const area = el('div', 'ws-area');
+  const ruling = svgEl('svg', { class: 'ruling', 'aria-hidden': 'true' });
+  area.append(ruling);
+  for (const block of sheetState.blocks) {
+    area.append(block.type === 'draw' ? drawBlock(block, g, live) : textBlock(sheetState, block, g, live));
+  }
+  page.append(area);
+  return { sheet: sheetState, g, page, area, ruling, bands: 0, live };
+}
+
+function headText(owner, key, className, live, placeholder) {
+  const node = el('div', className, owner[key]);
+  if (live) makeEditable(node, { singleLine: true, placeholder, onChange: value => { owner[key] = value; save(); } });
+  return node;
+}
+
+function blankField(owner, key, kind, live) {
+  const field = el('div', `ws-field ${kind}`);
+  const label = el('span', 'ws-label', owner[key]);
+  if (live) makeEditable(label, { singleLine: true, placeholder: 'Label', onChange: value => { owner[key] = value; save(); } });
+  field.append(label, el('span', 'fill'));
+  return field;
+}
+
+function textBlock(sheetState, block, g, live) {
+  const lineHeight = g.period * (1 + block.after);
+  const baseline = baselineIn(g.font, g.fontPx, lineHeight);
+  const traced = block.style === 'trace';
+  const blockNode = el('div', `blk text ${traced ? 'trace t-' + sheetState.trace : 'model'}`);
+  blockNode.dataset.id = block.id;
+  if (block.bind) blockNode.dataset.bind = block.bind;
+  blockNode.dataset.line = lineHeight;
+  blockNode.dataset.baseline = baseline;
+  Object.assign(blockNode.style, {
+    fontFamily: g.font.css,
+    fontWeight: g.font.weight,
+    fontSize: g.fontPx + 'px',
+    lineHeight: lineHeight + 'px',
+    // Every line box is the same height, so one shift puts every baseline on the second blue line.
+    top: (g.asc - baseline) + 'px',
+  });
+  const words = el('div', 'txt', block.bind ? sheetState[block.bind] : block.text);
+  words.style.minHeight = lineHeight + 'px';
+  words.style.textAlign = sheetState.align;
+  blockNode.append(words);
+  if (traced && sheetState.trace === 'dots') blockNode.append(svgEl('svg', { class: 'dots', 'aria-hidden': 'true' }));
+  if (live) {
+    makeEditable(words, { singleLine: !!block.bind, placeholder: 'Type here', onChange: value => blockTextChanged(block, blockNode, value) });
+  }
+  return blockNode;
+}
+
+function drawBlock(block, g, live) {
+  const blockNode = el('div', 'blk draw');
+  blockNode.dataset.id = block.id;
+  blockNode.dataset.height = block.rows * g.period;
+  blockNode.style.height = block.rows * g.period + 'px';
+  const frame = el('div', 'frame');
+  frame.style.height = block.rows * g.period - g.gap + 'px';
+  const caption = el('div', 'cap', block.caption);
+  frame.append(caption);
+  blockNode.append(frame);
+  if (live) {
+    frame.tabIndex = -1;
+    makeEditable(caption, { singleLine: true, placeholder: 'Caption', onChange: value => { block.caption = value; save(); } });
+  }
+  return blockNode;
+}
+
+// Needs the sheet to be in the document: draws the lines, the dots, and checks the fit.
+const AREA_TOP = 2; // matches .ws-area padding-top, so the first line is not clipped
+function layoutSheet(sheetView) {
+  const { sheet: sheetState, g, area, ruling } = sheetView;
+  const width = area.clientWidth;
+  const height = area.clientHeight - AREA_TOP;
+  const bands = Math.max(0, Math.floor((height - 1 + g.gap) / g.period + 1e-6));
+  const ink = INKS[sheetState.ink];
+  const round = value => Math.round(value * 100) / 100;
+  // Lines under a picture box are left out.
+  const covered = new Set();
+  for (const boxNode of $$('.blk.draw', area)) {
+    const first = Math.round((boxNode.offsetTop - AREA_TOP) / g.period);
+    const rows = Math.round(boxNode.offsetHeight / g.period);
+    for (let row = 0; row < rows; row++) covered.add(first + row);
+  }
+  let outer = '', inner = '', marks = '';
+  const markStep = g.band * 0.62;
+  for (let i = 0; i < bands; i++) {
+    if (covered.has(i)) continue;
+    const top = i * g.period;
+    const mid = top + g.asc - g.xh;
+    const base = top + g.asc;
+    const bottom = top + g.band;
+    outer += `M0 ${round(top)}H${width}M0 ${round(bottom)}H${width}`;
+    inner += `M0 ${round(mid)}H${width}M0 ${round(base)}H${width}`;
+    if (sheetState.marks) {
+      for (let x = markStep; x < width - 2; x += markStep) marks += `M${round(x)} ${round(top)}V${round(bottom)}`;
+    }
+  }
+  const stroke = Math.min(1.7, Math.max(1.1, g.band / 42));
+  ruling.setAttribute('width', width);
+  ruling.setAttribute('height', height);
+  ruling.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  ruling.innerHTML =
+    (marks ? `<path d="${marks}" stroke="${MARK_INK}" stroke-width="1" fill="none"/>` : '') +
+    `<path d="${inner}" stroke="${ink.inner}" stroke-width="${stroke}" fill="none"/>` +
+    `<path d="${outer}" stroke="${ink.outer}" stroke-width="${stroke}" fill="none"/>`;
+  sheetView.bands = bands;
+  fillPage(sheetView);
+  paintTracing(sheetView);
+  return checkFit(sheetView);
+}
+
+// Exact height a block takes on the ruled lines (offsetHeight is rounded to whole pixels).
+function slotHeight(blockNode) {
+  if (blockNode.dataset.height) return +blockNode.dataset.height;
+  const lineHeight = +blockNode.dataset.line;
+  return Math.max(1, Math.round(blockNode.offsetHeight / lineHeight)) * lineHeight;
+}
+
+// A line marked "fill" repeats down the page, leaving block.fill empty lines at the bottom.
+// The repeats are copies on the page only; they all edit the same line.
+function fillPage(sheetView) {
+  const { area, sheet: sheetState } = sheetView;
+  const block = [...sheetState.blocks].reverse().find(item => item.type === 'text' && item.fill);
+  if (!block) return;
+  const original = area.querySelector(`.blk[data-id="${block.id}"]:not(.copy)`);
+  if (!original || !original.offsetHeight) return;
+  const copies = $$(`.blk.copy[data-id="${block.id}"]`, area);
+  let used = 0;
+  for (const node of $$('.blk', area)) used += slotHeight(node);
+  for (const copy of copies) used -= slotHeight(copy);
+  const room = (sheetView.bands - block.fill) * sheetView.g.period - used;
+  const wanted = Math.min(60, Math.max(0, Math.floor(room / slotHeight(original) + 0.01)));
+  while (copies.length > wanted) copies.pop().remove();
+  let anchor = copies.length ? copies[copies.length - 1] : original;
+  for (let i = copies.length; i < wanted; i++) {
+    const copy = textBlock(sheetState, block, sheetView.g, sheetView.live);
+    copy.classList.add('copy');
+    anchor.after(copy);
+    anchor = copy;
+  }
+}
+
+function checkFit(sheetView) {
+  let used = 0;
+  for (const blockNode of $$('.blk', sheetView.area)) used += slotHeight(blockNode);
+  const fits = used <= sheetView.bands * sheetView.g.period + 0.5;
+  if (sheetView === editor.view) $('#fit-warn').hidden = fits;
+  return fits;
+}
+
+/* ---------- Editor ---------- */
+const holder = $('#holder');
+const stageInner = $('#stage-inner');
+const tools = $('#tools');
+const editor = { view: null, scale: 1, active: null, lastFocused: null };
+const currentSheet = () => sheetFor(store.last);
+
+function renderEditor() {
+  const sheetState = currentSheet();
+  hideTools();
+  const view = buildSheet(sheetState, true);
+  holder.replaceChildren(view.page);
+  editor.view = view;
+  fitPreview();
+  layoutSheet(view);
+  syncPanel();
+}
+
+function fitPreview() {
+  const page = editor.view && editor.view.page;
+  if (!page) return;
+  const pageWidth = page.offsetWidth;
+  const pageHeight = page.offsetHeight;
+  const stage = $('#stage');
+  const stageStyle = getComputedStyle(stage);
+  const availableWidth = stage.clientWidth - parseFloat(stageStyle.paddingLeft) - parseFloat(stageStyle.paddingRight);
+  let scale = Math.min(1, availableWidth / pageWidth);
+  if (window.innerWidth > 900) {
+    const availableHeight = window.innerHeight - $('.topbar').offsetHeight - 76;
+    scale = Math.min(scale, Math.max(availableHeight / pageHeight, 0.6));
+  }
+  editor.scale = scale;
+  page.style.transform = `scale(${scale})`;
+  holder.style.width = pageWidth * scale + 'px';
+  holder.style.height = pageHeight * scale + 'px';
+}
+
+function blockTextChanged(block, blockNode, value) {
+  const sheetState = currentSheet();
+  if (block.bind) {
+    sheetState[block.bind] = value;
+    if (block.bind === 'name') $('#child').value = value;
+  } else {
+    block.text = value;
+  }
+  syncText(blockNode);
+  save();
+}
+
+// Puts the latest words in every line that shows them (linked names, repeated lines),
+// then refreshes the repeats, the dots and the fit.
+function syncText(typedInto) {
+  const view = editor.view;
+  const sheetState = view.sheet;
+  for (const blockNode of $$('.blk.text', view.area)) {
+    if (blockNode === typedInto) continue;
+    const block = sheetState.blocks.find(item => item.id === blockNode.dataset.id);
+    if (!block) continue;
+    const value = block.bind ? sheetState[block.bind] : block.text;
+    if (blockNode.firstChild.textContent !== value) blockNode.firstChild.textContent = value;
+  }
+  fillPage(view);
+  paintTracing(view);
+  checkFit(view);
+  placeTools();
+}
+
+function focusBlock(id, selectAll = false) {
+  const blockNode = holder.querySelector(`.blk[data-id="${id}"]`);
+  if (!blockNode) return;
+  const target = blockNode.querySelector('.txt') || blockNode.querySelector('.frame');
+  target.focus({ preventScroll: true });
+  if (target.classList.contains('txt')) {
+    const selection = getSelection();
+    selection.selectAllChildren(target);
+    if (!selectAll) selection.collapseToEnd();
+  }
+}
+
+function showTools(blockNode) {
+  const block = currentSheet().blocks.find(item => item.id === blockNode.dataset.id);
+  if (!block) return hideTools();
+  editor.active = block.id;
+  editor.activeNode = blockNode;
+  editor.lastFocused = block.id;
+  const kind = block.type === 'draw' ? 'draw' : 'text';
+  for (const group of $$('.tg', tools)) group.hidden = group.dataset.for !== kind;
+  for (const button of $$('[data-act="style"]', tools)) button.setAttribute('aria-pressed', String(button.dataset.value === block.style));
+  for (const button of $$('[data-act="after"]', tools)) button.setAttribute('aria-pressed', String(+button.dataset.value === block.after));
+  for (const button of $$('[data-act="fill"]', tools)) button.setAttribute('aria-pressed', String(!!block.fill));
+  tools.hidden = false;
+  placeTools();
+}
+function hideTools() {
+  tools.hidden = true;
+  editor.active = null;
+  editor.activeNode = null;
+}
+function placeTools() {
+  if (tools.hidden || !editor.active) return;
+  const blockNode = editor.activeNode && editor.activeNode.isConnected
+    ? editor.activeNode
+    : holder.querySelector(`.blk[data-id="${editor.active}"]`);
+  if (!blockNode) return hideTools();
+  const innerBox = stageInner.getBoundingClientRect();
+  const blockBox = blockNode.getBoundingClientRect();
+  const shift = parseFloat(blockNode.style.top) || 0;
+  const firstLineTop = blockBox.top - shift * editor.scale;
+  const left = Math.min(Math.max(blockBox.left - innerBox.left, 0), Math.max(0, innerBox.width - tools.offsetWidth));
+  tools.style.left = left + 'px';
+  tools.style.top = Math.max(0, firstLineTop - innerBox.top - tools.offsetHeight - 8) + 'px';
+}
+
+holder.addEventListener('focusin', event => {
+  const blockNode = event.target.closest('.blk');
+  if (blockNode) showTools(blockNode);
+  else hideTools();
+});
+document.addEventListener('focusout', () => requestAnimationFrame(() => {
+  const focused = document.activeElement;
+  if (!focused || !holder.contains(focused) || !focused.closest('.blk')) hideTools();
+}));
+tools.addEventListener('mousedown', event => event.preventDefault());
+tools.addEventListener('click', event => {
+  const button = event.target.closest('button[data-act]');
+  if (!button) return;
+  const sheetState = currentSheet();
+  const index = sheetState.blocks.findIndex(item => item.id === editor.active);
+  if (index < 0) return;
+  const block = sheetState.blocks[index];
+  const value = button.dataset.value;
+  let focusId = block.id;
+  switch (button.dataset.act) {
+    case 'style': block.style = value; break;
+    case 'after': block.after = +value; break;
+    case 'rows': block.rows = Math.min(14, Math.max(1, block.rows + +value)); break;
+    case 'move': {
+      const to = index + +value;
+      if (to < 0 || to >= sheetState.blocks.length) return;
+      sheetState.blocks.splice(to, 0, sheetState.blocks.splice(index, 1)[0]);
+      break;
+    }
+    case 'fill': {
+      // Only one line can repeat down the page.
+      const turnOn = !block.fill;
+      for (const item of sheetState.blocks) delete item.fill;
+      if (turnOn) block.fill = 2;
+      break;
+    }
+    case 'copy': {
+      const copy = { ...structuredClone(block), id: newId() };
+      delete copy.fill;
+      sheetState.blocks.splice(index + 1, 0, copy);
+      focusId = copy.id;
+      break;
+    }
+    case 'remove':
+      sheetState.blocks.splice(index, 1);
+      focusId = null;
+      break;
+  }
+  save();
+  renderEditor();
+  if (focusId) focusBlock(focusId);
+});
+
+/* ---------- Settings panel ---------- */
+function buildPanel() {
+  const select = $('#tpl');
+  for (const template of OFFERED) {
+    const option = el('option', '', template.name);
+    option.value = template.id;
+    select.append(option);
+  }
+  select.addEventListener('change', () => { location.hash = select.value; });
+  if (OFFERED.length === 1) {
+    select.closest('.sec').hidden = true;
+    $('#all-sheets').hidden = true;
+  }
+
+  const choices = {
+    font: Object.fromEntries(Object.entries(FONTS).map(([key, font]) => [key, font.label])),
+    align: ALIGNS,
+    trace: TRACES,
+    ink: Object.fromEntries(Object.entries(INKS).map(([key, ink]) => [key, ink.label])),
+  };
+  for (const group of $$('.seg[data-key]')) {
+    const key = group.dataset.key;
+    for (const [value, label] of Object.entries(choices[key])) {
+      const button = el('button');
+      button.type = 'button';
+      button.dataset.value = value;
+      if (key === 'ink') {
+        const swatch = el('span', 'swatch');
+        swatch.style.setProperty('--outer', INKS[value].outer);
+        swatch.style.setProperty('--inner', INKS[value].inner);
+        button.append(swatch);
+      }
+      if (key === 'font') button.style.fontFamily = FONTS[value].css;
+      if (key === 'align') {
+        const icon = svgEl('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true' });
+        icon.append(svgEl('path', { d: ALIGN_ICONS[value] }));
+        button.append(icon);
+      }
+      button.append(label);
+      group.append(button);
+    }
+    group.addEventListener('click', event => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      currentSheet()[key] = button.dataset.value;
+      save();
+      renderEditor();
+    });
+  }
+
+  const letters = $('#letters');
+  for (const letter of Object.keys(LETTER_WORDS)) {
+    const button = el('button', '', letter);
+    button.type = 'button';
+    button.dataset.letter = letter;
+    letters.append(button);
+  }
+  letters.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    const sheetState = currentSheet();
+    const { title, blocks } = letterSheet(button.dataset.letter);
+    sheetState.letter = button.dataset.letter;
+    sheetState.head.title = title;
+    sheetState.blocks = blocks.map(block => ({ ...block, id: newId() }));
+    save();
+    renderEditor();
+  });
+
+  const setSize = size => {
+    currentSheet().size = Math.min(120, Math.max(20, size));
+    save();
+    renderEditor();
+  };
+  $('#size').addEventListener('input', event => setSize(+event.target.value));
+  for (const button of $$('[data-size]')) button.addEventListener('click', () => setSize(currentSheet().size + +button.dataset.size));
+  $('#space').addEventListener('input', event => {
+    currentSheet().space = +event.target.value;
+    save();
+    renderEditor();
+  });
+  for (const box of $$('.panel input[type="checkbox"][data-key]')) {
+    box.addEventListener('change', () => {
+      currentSheet()[box.dataset.key] = box.checked;
+      save();
+      renderEditor();
+    });
+  }
+
+  $('#child').addEventListener('input', event => {
+    currentSheet().name = event.target.value;
+    syncText(null);
+    save();
+  });
+  $('#names').addEventListener('input', event => {
+    currentSheet().names = event.target.value;
+    updatePrintLabel();
+    save();
+  });
+
+  $('#add-text').addEventListener('click', () => insertBlock(writing('trace', 'Type here', 1), true));
+  $('#add-box').addEventListener('click', () => insertBlock(pictureBox(4, 'Draw here.'), false));
+
+  const reset = $('#reset');
+  let resetTimer = 0;
+  reset.addEventListener('click', () => {
+    if (!reset.classList.contains('confirm')) {
+      reset.classList.add('confirm');
+      reset.textContent = 'Click again to reset';
+      resetTimer = setTimeout(() => { reset.classList.remove('confirm'); reset.textContent = 'Reset this sheet'; }, 3500);
+      return;
+    }
+    clearTimeout(resetTimer);
+    reset.classList.remove('confirm');
+    reset.textContent = 'Reset this sheet';
+    store.sheets[store.last] = makeSheet(store.last);
+    save();
+    renderEditor();
+  });
+
+  $('#print').addEventListener('click', () => window.print());
+}
+
+function insertBlock(block, selectText) {
+  const sheetState = currentSheet();
+  const placed = { ...block, id: newId() };
+  const index = sheetState.blocks.findIndex(item => item.id === editor.lastFocused);
+  sheetState.blocks.splice(index < 0 ? sheetState.blocks.length : index + 1, 0, placed);
+  save();
+  renderEditor();
+  focusBlock(placed.id, selectText);
+}
+
+function syncPanel() {
+  const sheetState = currentSheet();
+  $('#tpl').value = sheetState.tpl;
+  const hasName = sheetState.blocks.some(block => block.bind === 'name');
+  $('#sec-name').hidden = !hasName;
+  if (document.activeElement !== $('#child')) $('#child').value = sheetState.name || '';
+  if (document.activeElement !== $('#names')) $('#names').value = sheetState.names || '';
+  $('#sec-letter').hidden = sheetState.tpl !== 'letter';
+  for (const button of $$('#letters button')) button.setAttribute('aria-pressed', String(button.dataset.letter === sheetState.letter));
+  for (const group of $$('.seg[data-key]')) {
+    for (const button of group.children) button.setAttribute('aria-pressed', String(button.dataset.value === sheetState[group.dataset.key]));
+  }
+  $('#size').value = sheetState.size;
+  $('#space').value = sheetState.space;
+  $('#size-out').textContent = `${sheetState.size} pt · lines ${Math.round(editor.view.g.band / PX_PER_MM)} mm tall`;
+  for (const box of $$('.panel input[type="checkbox"][data-key]')) box.checked = !!sheetState[box.dataset.key];
+  updatePrintLabel();
+}
+
+/* ---------- Printing (one sheet, or one per child) ---------- */
+const classNames = sheetState => (sheetState.names || '').split('\n').map(name => name.trim()).filter(Boolean);
+function batchNames() {
+  if ($('#editor').hidden) return [];
+  const sheetState = currentSheet();
+  return sheetState.blocks.some(block => block.bind === 'name') ? classNames(sheetState) : [];
+}
+function updatePrintLabel() {
+  const count = batchNames().length;
+  $('#print-label').textContent = count > 1 ? `Print ${count} sheets` : 'Print';
+}
+function boundLinesFit(sheetView) {
+  return $$('.blk[data-bind]', sheetView.area).every(node => node.offsetHeight <= +node.dataset.line + 0.5);
+}
+
+window.addEventListener('beforeprint', () => {
+  hideTools();
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  const names = batchNames();
+  if (!names.length) return;
+  const batch = $('#batch');
+  batch.replaceChildren();
+  const sheetState = currentSheet();
+  for (const name of names) {
+    // Long names get smaller letters so each sheet still fits on one page.
+    for (let size = sheetState.size; ; size -= 4) {
+      const view = buildSheet({ ...sheetState, name, size }, false);
+      batch.append(view.page);
+      if ((layoutSheet(view) && boundLinesFit(view)) || size <= 24) break;
+      view.page.remove();
+    }
+  }
+  document.body.classList.add('batch');
+});
+window.addEventListener('afterprint', () => {
+  document.body.classList.remove('batch');
+  $('#batch').replaceChildren();
+});
+
+/* ---------- Gallery ---------- */
+function renderGallery() {
+  const grid = $('#grid');
+  grid.replaceChildren();
+  const views = [];
+  for (const template of OFFERED) {
+    const card = el('a', 'card');
+    card.href = '#' + template.id;
+    const thumb = el('div', 'thumb');
+    const paper = el('div', 'paper');
+    const view = buildSheet(sheetFor(template.id), false);
+    paper.append(view.page);
+    thumb.append(paper);
+    const body = el('div', 'card-body');
+    body.append(el('span', 'card-title', template.name), el('span', 'card-desc', template.desc), el('span', 'chip', template.level));
+    card.append(thumb, body);
+    grid.append(card);
+    views.push(view);
+  }
+  views.forEach(layoutSheet);
+}
+
+/* ---------- Pages ---------- */
+function route() {
+  const id = decodeURIComponent(location.hash.slice(1)).replace(/^\//, '');
+  const template = OFFERED.length === 1 ? OFFERED[0] : OFFERED.find(item => item.id === id);
+  $('#gallery').hidden = !!template;
+  $('#editor').hidden = !template;
+  $('#top-actions').hidden = !template;
+  if (template) {
+    store.last = template.id;
+    save();
+    renderEditor();
+    document.title = `${template.name} · Anand Vidhya Worksheets`;
+  } else {
+    hideTools();
+    renderGallery();
+    document.title = 'Handwriting Worksheets · Anand Vidhya';
+  }
+  window.scrollTo(0, 0);
+}
+
+function fontsReady() {
+  if (!document.fonts || !document.fonts.load) return Promise.resolve();
+  const loads = Object.values(FONTS).map(font => document.fonts.load(`${font.weight} 40px ${font.css}`, 'Abgx'));
+  loads.push(document.fonts.load(`700 20px ${COMIC}`, 'Ab'));
+  return Promise.race([Promise.allSettled(loads), new Promise(resolve => setTimeout(resolve, 3000))]);
+}
+
+async function start() {
+  buildPanel();
+  await fontsReady();
+  measureFonts();
+  route();
+  window.addEventListener('hashchange', route);
+  window.addEventListener('resize', () => {
+    if ($('#editor').hidden) return;
+    fitPreview();
+    placeTools();
+  });
+  if (document.fonts && document.fonts.addEventListener) {
+    document.fonts.addEventListener('loadingdone', () => {
+      if (!measureFonts()) return;
+      dotCache.clear();
+      skeletonCache.clear();
+      baselineCache.clear();
+      route();
+    });
+  }
+}
+start();
+})();
+</script>
+</body>
+</html>
