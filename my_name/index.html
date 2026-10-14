@@ -146,7 +146,7 @@ textarea.input { height: auto; padding: 9px 12px; resize: vertical; line-height:
 }
 .seg .swatch.double {
   background:
-    linear-gradient(#cf3a32 0 0) 0 2.4px / 100% 1.6px no-repeat,
+    linear-gradient(#3283cf 0 0) 0 2.4px / 100% 1.6px no-repeat,
     linear-gradient(#3283cf 0 0) 0 8px / 100% 1.6px no-repeat;
 }
 .fade-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
@@ -1143,7 +1143,7 @@ function layoutSheet(sheetView) {
     for (let row = 0; row < rows; row++) covered.add(first + row);
   }
   // Four lines: red top, blue body top, blue baseline, red bottom.
-  // Double line: just the letter body, red on top and blue at the baseline.
+  // Double line: just the two blue lines around the letter body.
   const double = sheetState.ruling === 'double';
   let outer = '', inner = '', marks = '';
   const markStep = g.band * 0.62;
@@ -1153,13 +1153,8 @@ function layoutSheet(sheetView) {
     const mid = top + g.asc - g.xh;
     const base = top + g.asc;
     const bottom = top + g.band;
-    if (double) {
-      outer += `M0 ${round(mid)}H${width}`;
-      inner += `M0 ${round(base)}H${width}`;
-    } else {
-      outer += `M0 ${round(top)}H${width}M0 ${round(bottom)}H${width}`;
-      inner += `M0 ${round(mid)}H${width}M0 ${round(base)}H${width}`;
-    }
+    inner += `M0 ${round(mid)}H${width}M0 ${round(base)}H${width}`;
+    if (!double) outer += `M0 ${round(top)}H${width}M0 ${round(bottom)}H${width}`;
     if (sheetState.marks) {
       const markTop = double ? mid : top, markBottom = double ? base : bottom;
       for (let x = markStep; x < width - 2; x += markStep) marks += `M${round(x)} ${round(markTop)}V${round(markBottom)}`;
@@ -1172,7 +1167,7 @@ function layoutSheet(sheetView) {
   ruling.innerHTML =
     (marks ? `<path d="${marks}" stroke="${MARK_INK}" stroke-width="1" fill="none"/>` : '') +
     `<path d="${inner}" stroke="${LINE_INK.inner}" stroke-width="${stroke}" fill="none"/>` +
-    `<path d="${outer}" stroke="${LINE_INK.outer}" stroke-width="${stroke}" fill="none"/>`;
+    (outer ? `<path d="${outer}" stroke="${LINE_INK.outer}" stroke-width="${stroke}" fill="none"/>` : '');
   sheetView.bands = bands;
   fillPage(sheetView);
   paintTracing(sheetView);
