@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fff'/%3E%3Cpath d='M8 15h48M8 49h48' stroke='%23cf3a32' stroke-width='4'/%3E%3Cpath d='M8 26h48M8 38h48' stroke='%233283cf' stroke-width='4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Tamma+2:wght@400&family=Comic+Neue:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400&family=Baloo+Tamma+2:wght@400&family=Comic+Neue:wght@400;700&display=swap">
 <style>
 :root {
   --bg: #f4f1ea;
@@ -21,7 +21,7 @@
   --brand-dark: #003a88;
   --brand-soft: #e7eefa;
   --danger: #b42318;
-  --comic: "Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo Tamma 2", cursive;
+  --comic: "Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo 2", "Baloo Tamma 2", cursive;
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -516,14 +516,14 @@ let idCounter = 0;
 const newId = () => Date.now().toString(36) + (idCounter++).toString(36);
 
 /* ---------- Font, lines and dots ---------- */
-// Comic Sans for English; Baloo Tamma 2, a rounded Kannada font, fills in Kannada letters.
-const COMIC = '"Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo Tamma 2", cursive';
+// Comic Sans for English; the rounded Baloo fonts fill in Hindi (Baloo 2) and Kannada (Baloo Tamma 2).
+const COMIC = '"Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo 2", "Baloo Tamma 2", cursive';
 const FONTS = {
   comic: { label: 'Comic Sans', css: COMIC, weight: 400, dotGap: 0.078, dotRadius: 0.021, spur: 0.05 },
 };
 const LINE_INK = { outer: '#cf3a32', inner: '#3283cf' }; // red and blue
 const RULINGS = { four: 'Four lines', double: 'Double line' };
-const KANNADA = /[ಀ-೿]/;
+const SCRIPT_LETTERS = { kannada: /[ಀ-೿]/g, hindi: /[ऀ-ॿ꣠-ꣿ]/g };
 const ALIGNS = { left: 'Left', center: 'Centre', right: 'Right' };
 const ALIGN_ICONS = {
   left: 'M2 3.5h12M2 6.5h8M2 9.5h12M2 12.5h7',
@@ -717,6 +717,13 @@ const SCRIPT_SAMPLES = {
     body: ['ಅ', 'ಉ', 'ಎ', 'ಒ', 'ಬ', 'ಣ', 'ಲ'], tails: ['ಕ್ಕ', 'ತ್ತ', 'ಪ್ಪ', 'ಲ್ಲ', 'ಮ್ಮ', 'ಸ್ತ', 'ನ್ನ'],
     fallback: { asc: 0.74, xh: 0.59, desc: 0.41 },
   },
+  // Hindi: the shirorekha (headline) sits on the second line, matras above it reach the top line
+  // and matras below hang down to the bottom line.
+  hindi: {
+    tall: [['कि', 'की', 'के', 'कै', 'को', 'कौ', 'र्क']],
+    body: ['क', 'ग', 'म', 'न', 'प', 'स', 'त', 'र', 'ल', 'व', 'ब', 'ह'], tails: ['कु', 'कू', 'कृ', 'दु', 'पु', 'सु'],
+    fallback: { asc: 0.87, xh: 0.61, desc: 0.29 },
+  },
 };
 const metrics = {};
 function measureFonts() {
@@ -740,10 +747,20 @@ function measureFonts() {
   return changed;
 }
 
-// Kannada words sit differently on the lines from English ones.
+// Kannada and Hindi words sit differently on the lines from English ones.
+// A sheet follows the script most of its words are written in.
 function sheetScript(sheetState) {
-  const words = sheetState.blocks.map(block => (block.bind ? sheetState[block.bind] : block.text) || '');
-  return words.some(text => KANNADA.test(text)) ? 'kannada' : 'latin';
+  const words = sheetState.blocks.map(block => (block.bind ? sheetState[block.bind] : block.text) || '').join(' ');
+  let script = 'latin';
+  let most = 0;
+  for (const [name, letters] of Object.entries(SCRIPT_LETTERS)) {
+    const count = (words.match(letters) || []).length;
+    if (count > most) {
+      script = name;
+      most = count;
+    }
+  }
+  return script;
 }
 
 // Where the lines go, in px, for a sheet's font, size and script.
@@ -2284,6 +2301,7 @@ function fontsReady() {
   const loads = Object.values(FONTS).map(font => document.fonts.load(`${font.weight} 40px ${font.css}`, 'Abgx'));
   loads.push(document.fonts.load(`700 20px ${COMIC}`, 'Ab'));
   loads.push(document.fonts.load('400 40px "Baloo Tamma 2"', 'ಕಅ')); // Kannada letters, so their heights are known
+  loads.push(document.fonts.load('400 40px "Baloo 2"', 'कअ')); // and Hindi letters
 
   return Promise.race([Promise.allSettled(loads), new Promise(resolve => setTimeout(resolve, 3000))]);
 }
