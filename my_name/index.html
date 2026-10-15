@@ -214,6 +214,11 @@ details.more[open] summary { margin-bottom: 8px; }
 .tools .tl { opacity: 0.68; padding: 0 3px 0 7px; }
 .tools .sep { width: 1px; height: 18px; margin: 0 4px; background: rgba(255, 255, 255, 0.22); }
 .tools svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tools .range { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; opacity: 1; }
+.tools .range input { width: 78px; accent-color: #fff; }
+.tools button .crop-label { margin-left: 6px; }
+.tools.dragging { opacity: 0; pointer-events: none; }
+.add-row .wide { grid-column: 1 / -1; }
 
 @media (max-width: 900px) {
   .editor { grid-template-columns: 1fr; }
@@ -233,6 +238,8 @@ details.more[open] summary { margin-bottom: 8px; }
 /* ---------- The printed sheet (A4) ---------- */
 .page {
   --ws-ink: #172036;
+  --inv: 1;
+  position: relative;
   width: 210mm; height: 297mm; padding: 11mm 13mm 11mm;
   display: flex; flex-direction: column; overflow: hidden;
   background: #fff; color: var(--ws-ink);
@@ -263,6 +270,33 @@ details.more[open] summary { margin-bottom: 8px; }
 .blk.draw .frame { position: relative; background: #fff; border: 1.6px solid #3b4456; border-radius: 3mm; outline: none; }
 .blk.draw .cap { position: absolute; left: 4mm; right: 4mm; top: 3mm; font-size: 14px; line-height: 1.3; color: #5f6878; }
 
+/* Images placed on the sheet */
+.ws-pics { position: absolute; inset: 0; pointer-events: none; }
+.pic { position: absolute; pointer-events: auto; touch-action: none; cursor: move; user-select: none; -webkit-user-select: none; }
+.pic-crop { position: absolute; inset: 0; overflow: hidden; }
+.pic-crop img { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.pic.grey img { filter: grayscale(1); }
+.pic.blend { mix-blend-mode: multiply; }
+.pic-overlay { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; }
+.pic-ui { position: absolute; pointer-events: auto; touch-action: none; cursor: move; }
+.pic-outline { position: absolute; inset: 0; outline: calc(1.5px * var(--inv)) solid #004aad; }
+.pic-stem { position: absolute; left: 50%; bottom: 100%; height: calc(20px * var(--inv)); border-left: calc(1.5px * var(--inv)) solid #004aad; }
+.pic-handle {
+  position: absolute; box-sizing: border-box; pointer-events: auto; touch-action: none;
+  width: calc(13px * var(--inv)); height: calc(13px * var(--inv)); margin: calc(-6.5px * var(--inv)) 0 0 calc(-6.5px * var(--inv));
+  background: #fff; border: calc(1.5px * var(--inv)) solid #004aad; border-radius: 50%;
+}
+.pic-handle.rot {
+  left: 50%; top: calc(-29px * var(--inv)); cursor: grab;
+  width: calc(20px * var(--inv)); height: calc(20px * var(--inv)); margin: calc(-10px * var(--inv)) 0 0 calc(-10px * var(--inv));
+  background: #004aad; border-color: #004aad; display: grid; place-items: center;
+}
+.pic-handle.rot svg { width: 70%; height: 70%; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pic-ui.cropping .pic-outline { outline-style: dashed; }
+.pic-ui.cropping .pic-handle { border-radius: calc(2px * var(--inv)); background: #004aad; }
+.pic-ui.cropping .pic-handle.rot, .pic-ui.cropping .pic-stem { display: none; }
+.stage.dropping .holder > .page { outline: 3px dashed #004aad; outline-offset: 6px; }
+
 .probe { position: absolute; left: -10000px; top: 0; visibility: hidden; white-space: nowrap; }
 .probe span { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
 #batch { position: absolute; left: -10000px; top: 0; }
@@ -279,14 +313,12 @@ details.more[open] summary { margin-bottom: 8px; }
 @page { size: A4 portrait; margin: 0; }
 @media print {
   html, body { background: #fff !important; }
-  .topbar, .gallery, .panel, .stage-bar, .tools, .probe { display: none !important; }
+  .topbar, .gallery, .panel, .stage-bar, .tools, .probe, .pic-overlay { display: none !important; }
   .editor:not([hidden]), .stage, .stage-inner { display: block !important; padding: 0 !important; margin: 0 !important; }
   .holder { width: auto !important; height: auto !important; margin: 0 !important; }
-  .holder > .page, #batch > .page {
-    position: relative !important; transform: none !important; box-shadow: none !important;
-    break-after: page; page-break-after: always;
-  }
-  .holder > .page:last-child, #batch > .page:last-child { break-after: auto; page-break-after: auto; }
+  .holder > .page, #batch > .page { position: relative !important; transform: none !important; box-shadow: none !important; }
+  #batch > .page { break-after: page; page-break-after: always; }
+  #batch > .page:last-child { break-after: auto; page-break-after: auto; }
   body.batch .editor { display: none !important; }
   #batch { position: static; }
   .page, .page * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -390,8 +422,11 @@ details.more[open] summary { margin-bottom: 8px; }
         <span class="lbl">Add to the sheet</span>
         <div class="add-row">
           <button class="btn" type="button" id="add-text">+ Writing line</button>
-          <button class="btn" type="button" id="add-box">+ Picture box</button>
+          <button class="btn" type="button" id="add-box">+ Drawing box</button>
+          <button class="btn wide" type="button" id="add-pic">+ Image</button>
         </div>
+        <input type="file" id="pic-file" accept="image/*" multiple hidden>
+        <p class="hint">You can also drag an image onto the sheet, or copy one and press Ctrl+V (⌘V on a Mac).</p>
       </div>
 
       <div class="sec">
@@ -403,6 +438,7 @@ details.more[open] summary { margin-bottom: 8px; }
       <div class="stage-bar">
         <span>Click any words on the sheet to change them.</span>
         <span class="warn" id="fit-warn" hidden>Too much for one page. Make the letters smaller or remove a line.</span>
+        <span class="warn" id="note" hidden></span>
       </div>
       <div class="stage-inner" id="stage-inner">
         <div class="holder" id="holder"></div>
@@ -428,6 +464,24 @@ details.more[open] summary { margin-bottom: 8px; }
           <button type="button" data-act="move" data-value="1" title="Move down" aria-label="Move down"><svg viewBox="0 0 16 16"><path d="M8 3v10M4 9l4 4 4-4"/></svg></button>
           <button type="button" data-act="copy" title="Duplicate" aria-label="Duplicate"><svg viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M3 10.5v-6A1.5 1.5 0 0 1 4.5 3h6"/></svg></button>
           <button type="button" data-act="remove" title="Delete" aria-label="Delete"><svg viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.6 4.5l.6 8.5h5.6l.6-8.5"/></svg></button>
+        </div>
+        <div class="tools" id="pic-tools" role="toolbar" aria-label="Image options" hidden>
+          <button type="button" data-pic="rotate" data-value="-90" title="Rotate left" aria-label="Rotate left"><svg viewBox="0 0 16 16"><path d="M3.6 8.6a4.6 4.6 0 1 0 1.6-4.1"/><path d="M4.8 1.6v3.1h3.1"/></svg></button>
+          <button type="button" data-pic="rotate" data-value="90" title="Rotate right" aria-label="Rotate right"><svg viewBox="0 0 16 16"><path d="M12.4 8.6a4.6 4.6 0 1 1-1.6-4.1"/><path d="M11.2 1.6v3.1H8.1"/></svg></button>
+          <button type="button" data-pic="flipX" title="Flip left to right" aria-label="Flip left to right"><svg viewBox="0 0 16 16"><path d="M8 1.5v13"/><path d="M5.6 4.5 2 11.5h3.6z"/><path d="M10.4 4.5 14 11.5h-3.6z"/></svg></button>
+          <button type="button" data-pic="flipY" title="Flip upside down" aria-label="Flip upside down"><svg viewBox="0 0 16 16"><path d="M1.5 8h13"/><path d="M4.5 5.6 11.5 2v3.6z"/><path d="M4.5 10.4l7 3.6v-3.6z"/></svg></button>
+          <span class="sep"></span>
+          <button type="button" data-pic="crop" title="Crop: drag the edges, then press Done" aria-label="Crop"><svg viewBox="0 0 16 16"><path d="M4.5 1.5v10h10"/><path d="M1.5 4.5h10v10"/></svg><span class="crop-label">Crop</span></button>
+          <button type="button" data-pic="grey" title="Black and white" aria-label="Black and white"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor"/></svg></button>
+          <button type="button" data-pic="blend" title="Show the lines through the image" aria-label="Show the lines through the image"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/><path d="M1.5 6.5h13M1.5 9.5h13"/></svg></button>
+          <label class="range" title="Make the image lighter or darker"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8C5.6 5 4 7.3 4 9.5a4 4 0 0 0 8 0c0-2.2-1.6-4.5-4-7.7z"/></svg><input type="range" id="pic-opacity" min="10" max="100" step="5" aria-label="Image strength"></label>
+          <span class="sep"></span>
+          <button type="button" data-pic="front" title="Bring to front" aria-label="Bring to front"><svg viewBox="0 0 16 16"><path d="M10.5 3.5v-1a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h1"/><rect x="5.5" y="5.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg></button>
+          <button type="button" data-pic="back" title="Send to back" aria-label="Send to back"><svg viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" fill="currentColor"/><path d="M12.5 5.5h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-1"/></svg></button>
+          <button type="button" data-pic="reset" title="Undo rotating, flipping, cropping and colour changes">Reset</button>
+          <span class="sep"></span>
+          <button type="button" data-pic="copy" title="Duplicate (Ctrl+D)" aria-label="Duplicate"><svg viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M3 10.5v-6A1.5 1.5 0 0 1 4.5 3h6"/></svg></button>
+          <button type="button" data-pic="remove" title="Delete (Delete key)" aria-label="Delete"><svg viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.6 4.5l.6 8.5h5.6l.6-8.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -604,6 +658,7 @@ const BASE_SHEET = {
   // How dark each dotted line is, top to bottom, in percent (used when fade is on).
   fade: false, fadeSteps: [100, 90, 80, 70, 60, 50],
   marks: true, fields: true, logo: true, name: '', names: '',
+  images: [], // pictures placed on the page; their files are kept in IndexedDB
 };
 const BASE_HEAD = { nameLabel: 'Name:', dateLabel: 'Date:' };
 
@@ -1065,6 +1120,12 @@ function buildSheet(sheetState, live) {
     area.append(block.type === 'draw' ? drawBlock(block, g, live) : textBlock(sheetState, block, g, live));
   }
   page.append(area);
+  const pictures = el('div', 'ws-pics');
+  for (const picture of sheetState.images || []) {
+    const url = imageUrls.get(picture.src);
+    if (url) pictures.append(pictureNode(picture, url));
+  }
+  page.append(pictures);
   return { sheet: sheetState, g, page, area, ruling, bands: 0, live };
 }
 
@@ -1217,19 +1278,20 @@ function checkFit(sheetView) {
 const holder = $('#holder');
 const stageInner = $('#stage-inner');
 const tools = $('#tools');
-const editor = { view: null, scale: 1, active: null, lastFocused: null };
+const editor = { view: null, scale: 1, active: null, lastFocused: null, picture: null, cropping: false };
 const currentSheet = () => sheetFor(store.last);
 
 function renderEditor() {
   const sheetState = currentSheet();
   hideTools();
   const view = buildSheet(sheetState, true);
-  holder.replaceChildren(view.page);
+  holder.replaceChildren(view.page, picOverlay);
   editor.view = view;
   fitPreview();
   layoutSheet(view);
   syncPanel();
   syncFadeInputs();
+  showPictureUi();
 }
 
 function fitPreview() {
@@ -1247,6 +1309,8 @@ function fitPreview() {
   }
   editor.scale = scale;
   page.style.transform = `scale(${scale})`;
+  Object.assign(picOverlay.style, { width: pageWidth + 'px', height: pageHeight + 'px', transform: `scale(${scale})` });
+  holder.style.setProperty('--inv', String(1 / scale));
   holder.style.width = pageWidth * scale + 'px';
   holder.style.height = pageHeight * scale + 'px';
 }
@@ -1544,8 +1608,10 @@ function buildPanel() {
     reset.classList.remove('confirm');
     reset.textContent = 'Reset this sheet';
     store.sheets[store.last] = makeSheet(store.last);
+    editor.picture = null;
     save();
     renderEditor();
+    collectUnusedImages();
   });
 
   $('#print').addEventListener('click', () => window.print());
@@ -1580,6 +1646,557 @@ function syncPanel() {
   updatePrintLabel();
 }
 
+/* ---------- Images ----------
+   Image files are kept in IndexedDB (too big for localStorage). The sheet keeps each image's
+   file key and how it is placed: position and size in page pixels, turn in degrees, flips,
+   crop (the share of the file cut from the left, top, right and bottom) and its look. */
+const IMAGE_MAX_PX = 2000; // bigger photos are shrunk to this on their long side
+const NEW_IMAGE_MM = 62;   // a new image first fits in a square this big
+const MIN_IMAGE_PX = 12;
+const imageUrls = new Map(); // file key -> object URL for <img>
+const picTools = $('#pic-tools');
+const picOverlay = el('div', 'pic-overlay'); // holds the chosen image's handles, above the page
+let gesture = null;
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+const imageStore = {
+  ready: null,
+  open() {
+    if (!this.ready) {
+      this.ready = new Promise(resolve => {
+        const giveUp = setTimeout(() => resolve(null), 2000);
+        const done = db => { clearTimeout(giveUp); resolve(db); };
+        try {
+          const request = indexedDB.open('anand-vidhya-worksheets', 1);
+          request.onupgradeneeded = () => request.result.createObjectStore('images');
+          request.onsuccess = () => done(request.result);
+          request.onerror = request.onblocked = () => done(null);
+        } catch { done(null); }
+      });
+    }
+    return this.ready;
+  },
+  async run(mode, action) {
+    const db = await this.open();
+    if (!db) return undefined;
+    return new Promise(resolve => {
+      try {
+        const transaction = db.transaction('images', mode);
+        const request = action(transaction.objectStore('images'));
+        transaction.oncomplete = () => resolve(request.result);
+        transaction.onerror = transaction.onabort = () => resolve(undefined);
+      } catch { resolve(undefined); }
+    });
+  },
+  get(key) { return this.run('readonly', files => files.get(key)); },
+  put(key, blob) { return this.run('readwrite', files => files.put(blob, key)); },
+  remove(key) { return this.run('readwrite', files => files.delete(key)); },
+};
+
+async function loadImages() {
+  const keys = new Set();
+  for (const sheetState of Object.values(store.sheets)) for (const picture of sheetState.images || []) keys.add(picture.src);
+  if (!keys.size || !(await imageStore.open())) return;
+  await Promise.all([...keys].map(async key => {
+    const blob = await imageStore.get(key);
+    if (blob) imageUrls.set(key, URL.createObjectURL(blob));
+  }));
+  // Forget images whose file is gone (for example after the browser's storage was cleared).
+  for (const sheetState of Object.values(store.sheets)) {
+    if (Array.isArray(sheetState.images)) sheetState.images = sheetState.images.filter(picture => imageUrls.has(picture.src));
+  }
+}
+
+function collectUnusedImages() {
+  const used = new Set();
+  for (const sheetState of Object.values(store.sheets)) for (const picture of sheetState.images || []) used.add(picture.src);
+  for (const [key, url] of imageUrls) {
+    if (used.has(key)) continue;
+    URL.revokeObjectURL(url);
+    imageUrls.delete(key);
+    imageStore.remove(key);
+  }
+}
+
+// Shrinks big photos and saves them as JPEG, or PNG when they have see-through parts.
+async function prepareImage(file) {
+  let source;
+  let url = null;
+  try {
+    source = await createImageBitmap(file);
+  } catch {
+    url = URL.createObjectURL(file); // SVG and a few other formats need an <img> to decode
+    source = new Image();
+    source.src = url;
+    await source.decode();
+  }
+  try {
+    const naturalWidth = source.naturalWidth || source.width || 600;
+    const naturalHeight = source.naturalHeight || source.height || 600;
+    const shrink = Math.min(1, IMAGE_MAX_PX / Math.max(naturalWidth, naturalHeight));
+    const width = Math.max(1, Math.round(naturalWidth * shrink));
+    const height = Math.max(1, Math.round(naturalHeight * shrink));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(source, 0, 0, width, height);
+    const seeThrough = !/jpe?g/i.test(file.type) && hasSeeThroughPixels(context, width, height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, seeThrough ? 'image/png' : 'image/jpeg', 0.9));
+    if (!blob) throw new Error('The image could not be saved');
+    return { blob, width, height };
+  } finally {
+    if (source && source.close) source.close();
+    if (url) URL.revokeObjectURL(url);
+  }
+}
+
+function hasSeeThroughPixels(context, width, height) {
+  const pixels = context.getImageData(0, 0, width, height).data;
+  for (let i = 3; i < pixels.length; i += 16) if (pixels[i] < 250) return true;
+  return false;
+}
+
+// at: where to centre the new image on the page (a drop point), or the middle of the page.
+async function addImageFiles(files, at) {
+  const images = [...files].filter(file => file.type.startsWith('image/'));
+  if (!images.length) {
+    if (files.length) showNote('Please choose an image file, such as a JPG or PNG.');
+    return;
+  }
+  const sheetState = currentSheet();
+  let added = null;
+  for (const file of images) {
+    try {
+      const { blob, width, height } = await prepareImage(file);
+      const key = 'img-' + newId();
+      imageUrls.set(key, URL.createObjectURL(blob));
+      imageStore.put(key, blob);
+      added = newPicture(key, width, height, at, added ? 16 : 0);
+      sheetState.images.push(added);
+      at = { x: added.x + added.w / 2, y: added.y + added.h / 2 };
+    } catch {
+      showNote(`${file.name || 'This image'} could not be opened. Please use a JPG or PNG file.`);
+    }
+  }
+  if (!added) return;
+  save();
+  renderEditor();
+  selectPicture(added.id);
+}
+
+function newPicture(key, width, height, at, offset) {
+  const page = editor.view.page;
+  const fit = (NEW_IMAGE_MM * PX_PER_MM) / Math.max(width, height);
+  const w = width * fit;
+  const h = height * fit;
+  const centre = at || { x: page.offsetWidth / 2, y: page.offsetHeight / 2 };
+  return {
+    id: newId(), src: key, ratio: width / height,
+    x: centre.x - w / 2 + offset, y: centre.y - h / 2 + offset, w, h,
+    angle: 0, flipX: false, flipY: false, crop: [0, 0, 0, 0], opacity: 1, grey: false, blend: false,
+  };
+}
+
+let noteTimer = 0;
+function showNote(message) {
+  const note = $('#note');
+  note.textContent = message;
+  note.hidden = false;
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(() => { note.hidden = true; }, 5000);
+}
+
+function pictureNode(picture, url) {
+  const node = el('div', 'pic');
+  node.dataset.id = picture.id;
+  const frame = el('div', 'pic-crop');
+  const img = el('img');
+  img.src = url;
+  img.alt = '';
+  img.draggable = false;
+  frame.append(img);
+  node.append(frame);
+  placePicture(node, picture);
+  return node;
+}
+
+function placePicture(node, picture) {
+  const [left, top, right, bottom] = picture.crop;
+  const fullWidth = picture.w / (1 - left - right);
+  const fullHeight = picture.h / (1 - top - bottom);
+  Object.assign(node.style, {
+    left: picture.x + 'px', top: picture.y + 'px', width: picture.w + 'px', height: picture.h + 'px',
+    transform: picture.angle ? `rotate(${picture.angle}deg)` : '',
+  });
+  node.classList.toggle('grey', !!picture.grey);
+  node.classList.toggle('blend', !!picture.blend);
+  // The crop window is flipped as a whole, so a flip mirrors what is shown and keeps the crop.
+  const frame = node.firstChild;
+  frame.style.transform = picture.flipX || picture.flipY ? `scale(${picture.flipX ? -1 : 1}, ${picture.flipY ? -1 : 1})` : '';
+  frame.style.opacity = picture.opacity < 1 ? String(picture.opacity) : '';
+  Object.assign(frame.firstChild.style, {
+    width: fullWidth + 'px', height: fullHeight + 'px', left: -left * fullWidth + 'px', top: -top * fullHeight + 'px',
+  });
+  const ui = picture.id === editor.picture && picOverlay.firstChild;
+  if (ui) {
+    ui.style.cssText = node.style.cssText;
+    ui.style.opacity = '';
+  }
+}
+
+const HANDLES = [['nw', -1, -1], ['n', 0, -1], ['ne', 1, -1], ['e', 1, 0], ['se', 1, 1], ['s', 0, 1], ['sw', -1, 1], ['w', -1, 0]];
+const HANDLE_CURSORS = { nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize' };
+function pictureHandles() {
+  const ui = el('div', 'pic-ui');
+  ui.title = 'Drag to move. Double-click to crop.';
+  ui.append(el('div', 'pic-outline'), el('div', 'pic-stem'));
+  for (const [name, hx, hy] of HANDLES) {
+    const handle = el('div', 'pic-handle');
+    handle.dataset.hx = hx;
+    handle.dataset.hy = hy;
+    Object.assign(handle.style, { left: (hx + 1) * 50 + '%', top: (hy + 1) * 50 + '%', cursor: HANDLE_CURSORS[name] });
+    ui.append(handle);
+  }
+  const turn = el('div', 'pic-handle rot');
+  turn.dataset.rotate = '1';
+  turn.title = 'Drag to turn (hold Shift for 15° steps)';
+  turn.innerHTML = '<svg viewBox="0 0 16 16"><path d="M12.6 9.4A4.8 4.8 0 1 1 11.2 4.4"/><path d="M11.8 1.6v3.3H8.5"/></svg>';
+  ui.append(turn);
+  return ui;
+}
+
+function selectedPicture() {
+  return editor.picture ? (currentSheet().images || []).find(picture => picture.id === editor.picture) || null : null;
+}
+function selectedNode() {
+  return editor.picture ? holder.querySelector(`.pic[data-id="${editor.picture}"]`) : null;
+}
+function selectPicture(id) {
+  editor.picture = id;
+  editor.cropping = false;
+  showPictureUi();
+}
+
+// Draws the handles on the chosen image and shows its toolbar.
+function showPictureUi() {
+  if (editor.picture && !selectedPicture()) editor.picture = null;
+  for (const node of $$('.pic', holder)) node.classList.toggle('cropping', node.dataset.id === editor.picture && !!editor.cropping);
+  const picture = selectedPicture();
+  const node = selectedNode();
+  picTools.hidden = !picture || !node;
+  if (!picture || !node) {
+    picOverlay.replaceChildren();
+    return;
+  }
+  if (!picOverlay.firstChild || picOverlay.firstChild.dataset.id !== picture.id) {
+    const ui = pictureHandles();
+    ui.dataset.id = picture.id;
+    picOverlay.replaceChildren(ui);
+  }
+  picOverlay.firstChild.classList.toggle('cropping', !!editor.cropping);
+  placePicture(node, picture);
+  for (const button of $$('[data-pic]', picTools)) {
+    if (typeof picture[button.dataset.pic] === 'boolean') button.setAttribute('aria-pressed', String(picture[button.dataset.pic]));
+  }
+  const cropButton = picTools.querySelector('[data-pic="crop"]');
+  cropButton.setAttribute('aria-pressed', String(!!editor.cropping));
+  cropButton.querySelector('.crop-label').textContent = editor.cropping ? 'Done' : 'Crop';
+  $('#pic-opacity').value = Math.round(picture.opacity * 100);
+  placePictureTools();
+}
+
+function placePictureTools() {
+  const node = selectedNode();
+  if (picTools.hidden || !node) return;
+  const inner = stageInner.getBoundingClientRect();
+  const box = node.getBoundingClientRect();
+  const left = clamp(box.left + box.width / 2 - picTools.offsetWidth / 2 - inner.left, 0, Math.max(0, inner.width - picTools.offsetWidth));
+  let top = box.top - inner.top - picTools.offsetHeight - 44; // above the turn handle
+  if (top < 0) top = box.bottom - inner.top + 14;
+  picTools.style.left = left + 'px';
+  picTools.style.top = top + 'px';
+}
+
+function pagePoint(event) {
+  const box = editor.view.page.getBoundingClientRect();
+  return { x: (event.clientX - box.left) / editor.scale, y: (event.clientY - box.top) / editor.scale };
+}
+
+const normaliseAngle = angle => {
+  const turned = ((angle % 360) + 360) % 360;
+  return turned > 180 ? turned - 360 : turned;
+};
+
+function startPictureGesture(event) {
+  const hit = event.target.closest('.pic, .pic-ui');
+  if (!hit) {
+    if (editor.picture) selectPicture(null);
+    return;
+  }
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  event.preventDefault();
+  const focused = document.activeElement;
+  if (focused && focused !== document.body && focused.blur) focused.blur();
+  if (editor.picture !== hit.dataset.id) selectPicture(hit.dataset.id);
+  const picture = selectedPicture();
+  const node = selectedNode();
+  if (!picture || !node) return;
+  const handle = event.target.closest('.pic-handle');
+  gesture = {
+    kind: !handle ? 'move' : handle.dataset.rotate ? 'rotate' : editor.cropping ? 'crop' : 'resize',
+    hx: handle ? +handle.dataset.hx || 0 : 0,
+    hy: handle ? +handle.dataset.hy || 0 : 0,
+    pointerId: event.pointerId,
+    start: pagePoint(event),
+    before: structuredClone(picture),
+    node,
+    moved: false,
+  };
+  hit.setPointerCapture(event.pointerId);
+}
+
+function movePictureGesture(event) {
+  if (!gesture || event.pointerId !== gesture.pointerId) return;
+  const picture = selectedPicture();
+  if (!picture) return;
+  const point = pagePoint(event);
+  const { before } = gesture;
+  if (!gesture.moved) {
+    gesture.moved = true;
+    picTools.classList.add('dragging');
+  }
+  if (gesture.kind === 'move') {
+    picture.x = before.x + point.x - gesture.start.x;
+    picture.y = before.y + point.y - gesture.start.y;
+  } else if (gesture.kind === 'rotate') {
+    turnPicture(picture, point, event.shiftKey);
+  } else {
+    reshapePicture(picture, before, gesture, point, event.shiftKey);
+  }
+  placePicture(gesture.node, picture);
+}
+
+function endPictureGesture(event) {
+  if (!gesture || event.pointerId !== gesture.pointerId) return;
+  const moved = gesture.moved;
+  gesture = null;
+  picTools.classList.remove('dragging');
+  if (moved) save();
+  placePictureTools();
+}
+
+function turnPicture(picture, point, fineSteps) {
+  const centre = { x: picture.x + picture.w / 2, y: picture.y + picture.h / 2 };
+  let angle = Math.atan2(point.y - centre.y, point.x - centre.x) * 180 / Math.PI + 90;
+  const straight = Math.round(angle / 90) * 90;
+  if (fineSteps) angle = Math.round(angle / 15) * 15;
+  else if (Math.abs(angle - straight) < 4) angle = straight; // a gentle pull towards upright and sideways
+  picture.angle = normaliseAngle(angle);
+}
+
+// Resizing and cropping keep the opposite corner or edge in place, even when the image is turned.
+// Corners keep the shape (hold Shift to stretch freely); side handles stretch one way.
+function reshapePicture(picture, before, { kind, hx, hy }, point, freeShape) {
+  const turn = before.angle * Math.PI / 180;
+  const cos = Math.cos(turn);
+  const sin = Math.sin(turn);
+  const toPage = (x, y) => ({ x: x * cos - y * sin, y: x * sin + y * cos });
+  const centre = { x: before.x + before.w / 2, y: before.y + before.h / 2 };
+  const toAnchor = toPage(-hx * before.w / 2, -hy * before.h / 2);
+  const anchor = { x: centre.x + toAnchor.x, y: centre.y + toAnchor.y };
+  const dx = point.x - anchor.x;
+  const dy = point.y - anchor.y;
+  const local = { x: dx * cos + dy * sin, y: -dx * sin + dy * cos };
+  let w = before.w;
+  let h = before.h;
+  if (kind === 'crop') {
+    // Cropping moves an edge of the window over the image; the image itself keeps its size.
+    const crop = [...before.crop];
+    const fullWidth = before.w / (1 - crop[0] - crop[2]);
+    const fullHeight = before.h / (1 - crop[1] - crop[3]);
+    if (hx) {
+      const cut = (hx > 0) !== !!before.flipX ? 2 : 0; // which side of the file, after flipping
+      const kept = 2 - cut;
+      w = clamp(hx * local.x, MIN_IMAGE_PX, fullWidth * (1 - crop[kept]));
+      crop[cut] = clamp(1 - crop[kept] - w / fullWidth, 0, 0.98);
+    }
+    if (hy) {
+      const cut = (hy > 0) !== !!before.flipY ? 3 : 1;
+      const kept = 4 - cut;
+      h = clamp(hy * local.y, MIN_IMAGE_PX, fullHeight * (1 - crop[kept]));
+      crop[cut] = clamp(1 - crop[kept] - h / fullHeight, 0, 0.98);
+    }
+    picture.crop = crop;
+  } else {
+    if (hx) w = Math.max(MIN_IMAGE_PX, hx * local.x);
+    if (hy) h = Math.max(MIN_IMAGE_PX, hy * local.y);
+    if (hx && hy && !freeShape) {
+      const along = (hx * local.x * before.w + hy * local.y * before.h) / (before.w ** 2 + before.h ** 2);
+      const scale = Math.max(along, MIN_IMAGE_PX / Math.min(before.w, before.h));
+      w = before.w * scale;
+      h = before.h * scale;
+    }
+  }
+  const toCentre = toPage(hx * w / 2, hy * h / 2);
+  picture.w = w;
+  picture.h = h;
+  picture.x = anchor.x + toCentre.x - w / 2;
+  picture.y = anchor.y + toCentre.y - h / 2;
+}
+
+function resetPicture(picture) {
+  const [left, , right] = picture.crop;
+  const width = picture.w / (1 - left - right);
+  const height = width / (picture.ratio || picture.w / picture.h);
+  const centre = { x: picture.x + picture.w / 2, y: picture.y + picture.h / 2 };
+  Object.assign(picture, {
+    w: width, h: height, x: centre.x - width / 2, y: centre.y - height / 2,
+    angle: 0, flipX: false, flipY: false, crop: [0, 0, 0, 0], opacity: 1, grey: false, blend: false,
+  });
+  editor.cropping = false;
+}
+
+function duplicatePicture(picture) {
+  const copy = { ...structuredClone(picture), id: newId(), x: picture.x + 16, y: picture.y + 16 };
+  const list = currentSheet().images;
+  list.splice(list.indexOf(picture) + 1, 0, copy);
+  save();
+  renderEditor();
+  selectPicture(copy.id);
+}
+
+function removePicture(picture) {
+  const list = currentSheet().images;
+  list.splice(list.indexOf(picture), 1);
+  const node = selectedNode();
+  if (node) node.remove();
+  selectPicture(null);
+  save();
+  collectUnusedImages();
+}
+
+function pictureToolClicked(event) {
+  const button = event.target.closest('button[data-pic]');
+  const picture = selectedPicture();
+  const node = selectedNode();
+  if (!button || !picture || !node) return;
+  switch (button.dataset.pic) {
+    case 'rotate': picture.angle = normaliseAngle(picture.angle + +button.dataset.value); break;
+    case 'flipX': picture.flipX = !picture.flipX; break;
+    case 'flipY': picture.flipY = !picture.flipY; break;
+    case 'grey': picture.grey = !picture.grey; break;
+    case 'blend': picture.blend = !picture.blend; break;
+    case 'crop': editor.cropping = !editor.cropping; break;
+    case 'front':
+    case 'back': {
+      const list = currentSheet().images;
+      list.splice(list.indexOf(picture), 1);
+      if (button.dataset.pic === 'front') {
+        list.push(picture);
+        node.parentNode.append(node);
+      } else {
+        list.unshift(picture);
+        node.parentNode.prepend(node);
+      }
+      break;
+    }
+    case 'reset': resetPicture(picture); break;
+    case 'copy': duplicatePicture(picture); return;
+    case 'remove': removePicture(picture); return;
+  }
+  placePicture(node, picture);
+  save();
+  showPictureUi();
+}
+
+function pictureKeys(event) {
+  const picture = selectedPicture();
+  if (!picture || $('#editor').hidden) return;
+  const target = event.target;
+  if (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+  const step = event.shiftKey ? 10 : 1;
+  const nudges = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+  if (nudges[event.key]) {
+    picture.x += nudges[event.key][0];
+    picture.y += nudges[event.key][1];
+    placePicture(selectedNode(), picture);
+    placePictureTools();
+    save();
+  } else if (event.key === 'Delete' || event.key === 'Backspace') {
+    removePicture(picture);
+  } else if (event.key === 'Escape' || (event.key === 'Enter' && editor.cropping)) {
+    if (editor.cropping) {
+      editor.cropping = false;
+      showPictureUi();
+    } else {
+      selectPicture(null);
+    }
+  } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd') {
+    duplicatePicture(picture);
+  } else {
+    return;
+  }
+  event.preventDefault();
+}
+
+function setUpPictures() {
+  $('#add-pic').addEventListener('click', () => $('#pic-file').click());
+  $('#pic-file').addEventListener('change', event => {
+    const files = [...event.target.files];
+    event.target.value = ''; // so the same file can be chosen again
+    addImageFiles(files, null);
+  });
+
+  holder.addEventListener('pointerdown', startPictureGesture);
+  holder.addEventListener('pointermove', movePictureGesture);
+  holder.addEventListener('pointerup', endPictureGesture);
+  holder.addEventListener('pointercancel', endPictureGesture);
+  holder.addEventListener('dblclick', event => {
+    if (!event.target.closest('.pic, .pic-ui')) return;
+    editor.cropping = !editor.cropping;
+    showPictureUi();
+  });
+  document.addEventListener('pointerdown', event => {
+    if (editor.picture && !event.target.closest('#holder, #pic-tools, .panel')) selectPicture(null);
+  });
+  picTools.addEventListener('click', pictureToolClicked);
+  $('#pic-opacity').addEventListener('input', event => {
+    const picture = selectedPicture();
+    if (!picture) return;
+    picture.opacity = +event.target.value / 100;
+    placePicture(selectedNode(), picture);
+    save();
+  });
+  document.addEventListener('keydown', pictureKeys);
+
+  // Paste an image copied from another app or a web page. Copied text still pastes as text.
+  document.addEventListener('paste', event => {
+    if ($('#editor').hidden || !event.clipboardData) return;
+    const files = [...event.clipboardData.files].filter(file => file.type.startsWith('image/'));
+    if (!files.length) return;
+    const typing = event.target.isContentEditable || /^(INPUT|TEXTAREA)$/.test(event.target.tagName);
+    if (typing && event.clipboardData.getData('text/plain')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    addImageFiles(files, null);
+  }, true);
+
+  // Drop image files on the sheet. Anywhere else, stop the browser from opening the file instead.
+  const stage = $('#stage');
+  const carriesFiles = event => !!event.dataTransfer && [...event.dataTransfer.types].includes('Files');
+  document.addEventListener('dragover', event => { if (carriesFiles(event)) event.preventDefault(); });
+  document.addEventListener('drop', event => { if (carriesFiles(event)) event.preventDefault(); });
+  stage.addEventListener('dragover', event => { if (carriesFiles(event)) stage.classList.add('dropping'); });
+  stage.addEventListener('dragleave', event => { if (!stage.contains(event.relatedTarget)) stage.classList.remove('dropping'); });
+  stage.addEventListener('drop', event => {
+    stage.classList.remove('dropping');
+    if (!carriesFiles(event) || !editor.view || $('#editor').hidden) return;
+    event.preventDefault();
+    addImageFiles(event.dataTransfer.files, pagePoint(event));
+  });
+}
+
 /* ---------- Printing (one sheet, or one per child) ---------- */
 const classNames = sheetState => (sheetState.names || '').split('\n').map(name => name.trim()).filter(Boolean);
 function batchNames() {
@@ -1597,6 +2214,7 @@ function boundLinesFit(sheetView) {
 
 window.addEventListener('beforeprint', () => {
   hideTools();
+  selectPicture(null);
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   const names = batchNames();
   if (!names.length) return;
@@ -1672,7 +2290,8 @@ function fontsReady() {
 
 async function start() {
   buildPanel();
-  await fontsReady();
+  setUpPictures();
+  await Promise.all([fontsReady(), loadImages()]);
   measureFonts();
   route();
   window.addEventListener('hashchange', route);
@@ -1680,6 +2299,7 @@ async function start() {
     if ($('#editor').hidden) return;
     fitPreview();
     placeTools();
+    placePictureTools();
   });
   if (document.fonts && document.fonts.addEventListener) {
     document.fonts.addEventListener('loadingdone', () => {
