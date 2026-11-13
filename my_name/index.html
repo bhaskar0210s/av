@@ -383,6 +383,7 @@ details.more[open] summary { margin-bottom: 8px; }
       <div class="sec" id="sec-name" hidden>
         <label class="lbl" for="child">Child's name</label>
         <input class="input" id="child" autocomplete="off" spellcheck="false">
+        <p class="hint" id="name-gone" hidden>The name line was deleted from the sheet. Type here to put it back.</p>
         <details class="more" id="class-box">
           <summary>Print for the whole class</summary>
           <textarea class="input" id="names" rows="6" placeholder="One name on each line" spellcheck="false"></textarea>
@@ -1888,12 +1889,16 @@ function buildPanel() {
   }
 
   $('#child').addEventListener('input', event => {
-    currentSheet().name = event.target.value;
+    const sheetState = currentSheet();
+    sheetState.name = event.target.value;
+    if (restoreNameLine(sheetState)) return save();
     syncText(null);
     save();
   });
   $('#names').addEventListener('input', event => {
-    currentSheet().names = event.target.value;
+    const sheetState = currentSheet();
+    sheetState.names = event.target.value;
+    restoreNameLine(sheetState);
     updatePrintLabel();
     save();
   });
@@ -1947,11 +1952,26 @@ function insertBlock(block, selectText) {
   focusBlock(placed.id, selectText);
 }
 
+// The name box stays at the top of a name sheet even when its name line has been deleted;
+// typing in the box puts the line back at the top, repeating down the page as it did at first
+// (unless another line already fills the page). Returns true when it added the line.
+const hasNameLine = sheetState => sheetState.blocks.some(block => block.bind === 'name');
+const madeWithName = templateId => TEMPLATE_BY_ID[templateId].make().blocks.some(block => block.bind === 'name');
+function restoreNameLine(sheetState) {
+  if (hasNameLine(sheetState) || !madeWithName(sheetState.tpl)) return false;
+  const line = { ...writing('trace', '', 0, 'name'), id: newId() };
+  if (!sheetState.blocks.some(block => block.fill)) line.fill = 2;
+  sheetState.blocks.unshift(line);
+  renderEditor();
+  return true;
+}
+
 function syncPanel() {
   const sheetState = currentSheet();
   $('#tpl').value = sheetState.tpl;
-  const hasName = sheetState.blocks.some(block => block.bind === 'name');
-  $('#sec-name').hidden = !hasName;
+  const hasName = hasNameLine(sheetState);
+  $('#sec-name').hidden = !hasName && !madeWithName(sheetState.tpl);
+  $('#name-gone').hidden = hasName;
   if (document.activeElement !== $('#child')) $('#child').value = sheetState.name || '';
   if (document.activeElement !== $('#names')) $('#names').value = sheetState.names || '';
   $('#sec-letter').hidden = sheetState.tpl !== 'letter';
