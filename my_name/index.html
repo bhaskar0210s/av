@@ -914,7 +914,9 @@ function wordSkeleton(fontKey, text) {
     const rgba = rasterContext.getImageData(0, 0, width, height).data;
     const ink = new Uint8Array(width * height);
     for (let i = 0; i < ink.length; i++) ink[i] = rgba[i * 4 + 3] > 127 ? 1 : 0;
-    shape = { pixels: Int32Array.from(thinToCentreLine(ink, width, height)), width, height, originX, originY };
+    const solid = ink.slice(); // the letters before thinning
+    const pixels = thinToCentreLine(ink, width, height);
+    shape = { pixels: Int32Array.from(pixels), width, height, originX, originY, ends: strokeEnds(solid, ink, pixels, width, height) };
   }
   if (skeletonCache.size > 800) skeletonCache.clear();
   skeletonCache.set(cacheKey, shape);
@@ -932,7 +934,7 @@ function glyphDots(fontKey, text, spacing = 1) {
     const font = FONTS[fontKey];
     const ink = new Uint8Array(shape.width * shape.height);
     for (const i of shape.pixels) ink[i] = 1;
-    const points = dotsAlongCentreLine(ink, shape.pixels, shape.width, font.dotGap * spacing * RASTER_PX, font.spur * RASTER_PX);
+    const points = dotsAlongCentreLine(ink, shape.pixels, shape.width, font.dotGap * spacing * RASTER_PX, font.spur * RASTER_PX, shape.ends);
     dots = new Float32Array(points.length);
     for (let i = 0; i < points.length; i += 2) {
       dots[i] = (points[i] + 0.5 - shape.originX) / RASTER_PX;
@@ -985,7 +987,61 @@ function thinToCentreLine(ink, width, height) {
   return pixels.filter(i => ink[i]);
 }
 
-function dotsAlongCentreLine(ink, skeleton, width, gap, spurLength) {
+// Thinning wears away the ends of slanting strokes: the long stroke at the top of a 6 lost a
+// third of its length. For each loose end of the centre line, look along its stroke in the
+// letter itself. When the stroke carries on well past the end, keeping its width, remember
+// where its rounded end really is, so the dots can run the whole way.
+function strokeEnds(solid, line, pixels, width, height) {
+  const offsets = [-width - 1, -width, -width + 1, -1, 1, width - 1, width, width + 1];
+  const inside = (x, y) => {
+    const col = Math.round(x), row = Math.round(y);
+    return col >= 0 && row >= 0 && col < width && row < height && solid[row * width + col] === 1;
+  };
+  // How far the letter goes on from (x, y) in the direction (dx, dy).
+  const run = (x, y, dx, dy) => {
+    let distance = 0;
+    while (distance < 400 && inside(x + dx * (distance + 0.5), y + dy * (distance + 0.5))) distance += 0.5;
+    return distance;
+  };
+  const across = (x, y, dx, dy) => run(x, y, -dy, dx) + run(x, y, dy, -dx) + 1;
+  const ends = new Map();
+  for (const end of pixels) {
+    let next = -1, degree = 0;
+    for (const offset of offsets) if (line[end + offset]) { degree++; next = end + offset; }
+    if (degree !== 1) continue;
+    // Which way the stroke runs: from up to ten pixels back along the line, to its end.
+    let previous = end, current = next;
+    for (let steps = 1; steps < 10; steps++) {
+      let step = -1, choices = 0;
+      for (const offset of offsets) {
+        const j = current + offset;
+        if (line[j] && j !== previous) { step = j; choices++; }
+      }
+      if (choices !== 1) break;
+      previous = current;
+      current = step;
+    }
+    const x = end % width, y = (end - x) / width;
+    const backX = current % width, backY = (current - backX) / width;
+    const length = Math.hypot(x - backX, y - backY);
+    if (length < 4) continue;
+    const dx = (x - backX) / length, dy = (y - backY) / length;
+    const half = across(x, y, dx, dy) / 2;
+    // Follow the stroke to its tip; if it runs into another stroke instead, leave the end alone.
+    let along = 0, clean = false;
+    while (along < 400) {
+      const px = x + dx * (along + 1), py = y + dy * (along + 1);
+      if (!inside(px, py)) { clean = true; break; }
+      if (across(px, py, dx, dy) > 3.2 * half) break;
+      along += 1;
+    }
+    const missing = along - half;
+    if (clean && missing > Math.max(2, half * 0.35)) ends.set(end, [x + dx * missing, y + dy * missing]);
+  }
+  return ends;
+}
+
+function dotsAlongCentreLine(ink, skeleton, width, gap, spurLength, ends = null) {
   const offsets = [-width - 1, -width, -width + 1, -1, 1, width - 1, width, width + 1];
   const degree = new Uint8Array(ink.length);
   for (const i of skeleton) {
@@ -1005,27 +1061,29 @@ function dotsAlongCentreLine(ink, skeleton, width, gap, spurLength) {
   };
   const colOf = i => i % width;
   const rowOf = i => (i - (i % width)) / width;
-  const placeAlong = (path, closed) => {
-    const count = path.length;
+  // before and after: where a stroke really ends, beyond the first and last pixel of the path.
+  const placeAlong = (path, closed, before, after) => {
+    const xs = [], ys = [];
+    if (before) { xs.push(before[0]); ys.push(before[1]); }
+    for (const i of path) { xs.push(colOf(i)); ys.push(rowOf(i)); }
+    if (after) { xs.push(after[0]); ys.push(after[1]); }
+    const count = xs.length;
     const distance = new Float64Array(count);
-    for (let k = 1; k < count; k++) {
-      distance[k] = distance[k - 1] + Math.hypot(colOf(path[k]) - colOf(path[k - 1]), rowOf(path[k]) - rowOf(path[k - 1]));
-    }
+    for (let k = 1; k < count; k++) distance[k] = distance[k - 1] + Math.hypot(xs[k] - xs[k - 1], ys[k] - ys[k - 1]);
     let total = distance[count - 1];
-    if (closed) total += Math.hypot(colOf(path[0]) - colOf(path[count - 1]), rowOf(path[0]) - rowOf(path[count - 1]));
-    if (total < 1e-6) { addDot(colOf(path[0]), rowOf(path[0])); return; }
+    if (closed) total += Math.hypot(xs[0] - xs[count - 1], ys[0] - ys[count - 1]);
+    if (total < 1e-6) { addDot(xs[0], ys[0]); return; }
     const segments = Math.max(closed ? 3 : 1, Math.round(total / gap));
     const stops = closed ? segments : segments + 1;
     let k = 0;
     for (let q = 0; q < stops; q++) {
       const target = (total * q) / segments;
       while (k < count - 1 && distance[k + 1] < target) k++;
-      const from = path[k];
-      const to = k + 1 < count ? path[k + 1] : path[0];
+      const to = k + 1 < count ? k + 1 : 0;
       const start = distance[k];
       const end = k + 1 < count ? distance[k + 1] : total;
       const t = end > start ? Math.min(1, (target - start) / (end - start)) : 0;
-      addDot(colOf(from) + (colOf(to) - colOf(from)) * t, rowOf(from) + (rowOf(to) - rowOf(from)) * t);
+      addDot(xs[k] + (xs[to] - xs[k]) * t, ys[k] + (ys[to] - ys[k]) * t);
     }
   };
   // Strokes that start or end somewhere: walk from every end point and junction.
@@ -1054,7 +1112,7 @@ function dotsAlongCentreLine(ink, skeleton, width, gap, spurLength) {
       }
       const endDegree = degree[path[path.length - 1]];
       const isSpur = path.length < spurLength && ((startDegree === 1 && endDegree >= 3) || (startDegree >= 3 && endDegree === 1));
-      if (!isSpur) placeAlong(path, false);
+      if (!isSpur) placeAlong(path, false, ends && ends.get(path[0]), ends && ends.get(path[path.length - 1]));
     }
   }
   // Closed loops such as o and 0.
