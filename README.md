@@ -1,7 +1,7 @@
 # Anand Vidhya worksheets
 
 Printable handwriting worksheets for Anand Vidhya, on four lines, a double line or squares
-(like a maths square-line notebook, with one letter or number in each square).
+(like a maths square-line notebook, with one letter or number in each square, written across or down the page).
 
 - **My Name**: https://bhaskar0210s.github.io/av/my_name/
 

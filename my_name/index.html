@@ -278,6 +278,13 @@ details.more[open] summary { margin-bottom: 8px; }
 .blk .dots { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; user-select: none; -webkit-user-select: none; }
 /* Squares: the words are laid out one square per letter with empty glyphs, and the letters are drawn over them. */
 .blk.text.cells .txt { color: transparent; }
+/* Written down the squares: lines become columns, filled from the top, the next one to the right. */
+.ws-area.down { writing-mode: vertical-lr; text-orientation: upright; }
+.ws-area.down .blk.draw .cap { writing-mode: horizontal-tb; }
+.panel.down .seg[data-key="align"] svg { transform: rotate(90deg); }
+.panel.down .fade-list { grid-template-columns: 1fr; }
+.tools.down [data-act="move"] svg { transform: rotate(-90deg); }
+.panel.down .fade-row label { min-width: 70px; }
 .blk.text.cells .txt:empty::before { font-family: var(--comic); font-size: var(--glyph); }
 .blk.draw .frame { position: relative; background: #fff; border: 1.6px solid #3b4456; border-radius: 3mm; outline: none; }
 .blk.draw .cap { position: absolute; left: 4mm; right: 4mm; top: 3mm; font-size: 14px; line-height: 1.3; color: #5f6878; }
@@ -426,6 +433,10 @@ details.more[open] summary { margin-bottom: 8px; }
       <div class="sec">
         <span class="lbl">Lines</span>
         <div class="seg" data-key="ruling" role="group" aria-label="Lines"></div>
+        <div class="slider" id="direction-box" hidden>
+          <div class="slider-head"><span>Write</span></div>
+          <div class="seg" data-key="direction" role="group" aria-label="Writing direction"></div>
+        </div>
         <label class="check"><input type="checkbox" data-key="marks"> Spacing marks</label>
         <label class="check"><input type="checkbox" data-key="fields"> Name and date</label>
         <label class="check"><input type="checkbox" data-key="logo"> School logo</label>
@@ -582,6 +593,9 @@ function hasComicSans() {
 }
 const SCRIPT_LETTERS = { kannada: /[ಀ-೿]/g, hindi: /[ऀ-ॿ꣠-ꣿ]/g };
 const ALIGNS = { left: 'Left', center: 'Centre', right: 'Right' };
+const ALIGNS_DOWN = { left: 'Top', center: 'Middle', right: 'Bottom' }; // the same choices when writing down
+const DIRECTIONS = { across: 'Across', down: 'Down' };
+const DIRECTION_ICONS = { across: 'M2 8h11M9.5 4.5 13 8l-3.5 3.5', down: 'M8 2v11M4.5 9.5 8 13l3.5-3.5' };
 const ALIGN_ICONS = {
   left: 'M2 3.5h12M2 6.5h8M2 9.5h12M2 12.5h7',
   center: 'M2 3.5h12M4 6.5h8M2 9.5h12M4.5 12.5h7',
@@ -714,6 +728,7 @@ const BASE_SHEET = {
   v: SHEET_VERSION, font: 'comic', size: 40, space: 0.55, align: 'left', ruling: 'four',
   // How dark each dotted line is, top to bottom, in percent (used when fade is on).
   fade: false, fadeSteps: [100, 90, 80, 70, 60, 50],
+  direction: 'across', // on squares: 'down' writes each line top to bottom
   marks: true, fields: true, logo: true, name: '', names: '',
   images: [], // pictures placed on the page; their files are kept in IndexedDB
 };
@@ -749,6 +764,7 @@ function sheetFor(templateId) {
   for (const key in BASE_SHEET) if (!(key in sheetState)) sheetState[key] = structuredClone(BASE_SHEET[key]);
   if (!ALIGNS[sheetState.align]) sheetState.align = 'left';
   if (!RULINGS[sheetState.ruling]) sheetState.ruling = 'four';
+  if (!DIRECTIONS[sheetState.direction]) sheetState.direction = 'across';
   if (!Array.isArray(sheetState.fadeSteps)) sheetState.fadeSteps = structuredClone(BASE_SHEET.fadeSteps);
   return sheetState;
 }
@@ -835,6 +851,7 @@ function geometry(sheetState) {
     const cols = Math.max(1, Math.floor((AREA_WIDTH - 2) / cell));
     return {
       font, fontKey: sheetState.font, script, fontPx, grid: true, cell, cols,
+      down: sheetState.direction === 'down',
       gridLeft: (AREA_WIDTH - cols * cell) / 2,
       asc: (cell + digits) / 2, xh: digits, desc: (cell - digits) / 2, band: cell, gap: 0, period: cell,
     };
@@ -1244,17 +1261,21 @@ function paintCells(sheetView, blockNode, strength) {
   const radius = Math.max(0.6, g.font.dotRadius * g.fontPx) * style.size;
   let d = '';
   const letters = [];
-  const draw = (text, x, line, centred) => {
+  const draw = (text, x, y, centred) => {
     const originX = centred ? x - inkMiddle(g.fontKey, text) * g.fontPx : x;
-    const y = line * lineHeight + baseline;
     if (solid) letters.push([text, originX, y]);
     else d += dotPath(glyphDots(g.fontKey, text, style.spacing), originX, y, g.fontPx, radius);
   };
   let word = null;
   const flushWord = () => {
-    if (word) draw(word.text, word.x, word.line, false);
+    if (word) draw(word.text, word.x, word.line * lineHeight + baseline, false);
     word = null;
   };
+  // Writing down: every letter goes in the middle of the square it was laid out in,
+  // worked out from where the squares are on the page.
+  const areaBox = g.down && sheetView.area.getBoundingClientRect();
+  const blockLeft = g.down && (box.left - areaBox.left) / scale;
+  const blockTop = g.down && (box.top - areaBox.top) / scale;
   const walker = document.createTreeWalker(blockNode.firstChild, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     let at = 0;
@@ -1266,11 +1287,20 @@ function paintCells(sheetView, blockNode, strength) {
       charRange.setEnd(node, at);
       const rect = charRange.getClientRects()[0];
       if (!rect) continue;
+      if (g.down) {
+        const x = ((rect.left + rect.right) / 2 - areaBox.left) / scale;
+        const y = ((rect.top + rect.bottom) / 2 - areaBox.top) / scale;
+        const row = Math.floor((y - AREA_TOP) / g.cell);
+        const square = Math.floor((x - g.gridLeft) / g.cell);
+        const middle = CELL_TEXT.test(part) ? g.gridLeft + (square + 0.5) * g.cell : x;
+        draw(part, middle - blockLeft, AREA_TOP + row * g.cell + g.asc - blockTop, true);
+        continue;
+      }
       const line = Math.floor(((rect.top + rect.bottom) / 2 - box.top) / scale / lineHeight);
       if (CELL_TEXT.test(part)) {
         flushWord();
         const square = Math.floor((((rect.left + rect.right) / 2 - box.left) / scale - g.gridLeft) / g.cell);
-        draw(part, g.gridLeft + (square + 0.5) * g.cell, line, true);
+        draw(part, g.gridLeft + (square + 0.5) * g.cell, line * lineHeight + baseline, true);
       } else if (word && word.line === line) {
         word.text += part;
       } else {
@@ -1367,6 +1397,11 @@ function buildSheet(sheetState, live) {
     page.append(fields);
   }
   const area = el('div', 'ws-area');
+  if (g.down) {
+    // Lines run left to right across the page as columns, starting at the first column of squares.
+    area.classList.add('down');
+    area.style.paddingLeft = g.gridLeft + 'px';
+  }
   const ruling = svgEl('svg', { class: 'ruling', 'aria-hidden': 'true' });
   area.append(ruling);
   for (const block of sheetState.blocks) {
@@ -1406,7 +1441,22 @@ function textBlock(sheetState, block, g, live) {
   const words = el('div', 'txt', block.bind ? sheetState[block.bind] : block.text);
   words.style.minHeight = lineHeight + 'px';
   words.style.textAlign = sheetState.align;
-  if (g.grid) {
+  if (g.grid && g.down) {
+    // Written down the squares: each line is a column, one square under another, and a line
+    // that runs out of squares carries on at the top of the next column. Half the line's spare
+    // width sits on each side of its letters, so the shift puts them on the first column of the line.
+    // The column height is set when the page is laid out (alignCells).
+    blockNode.classList.add('down');
+    Object.assign(blockNode.style, {
+      fontFamily: CELL_FONT.css,
+      fontWeight: CELL_FONT.weight,
+      fontSize: g.cell + 'px',
+      lineHeight: lineHeight + 'px',
+      left: -(lineHeight - g.cell) / 2 + 'px',
+    });
+    blockNode.style.setProperty('--glyph', g.fontPx + 'px');
+    Object.assign(words.style, { padding: '0', minHeight: '', minWidth: lineHeight + 'px' });
+  } else if (g.grid) {
     // Laid out one square per letter, starting at the first square of the row. The shift puts the
     // cursor over the first row of squares; the letters are drawn on the baseline in dataset.baseline.
     const baseline = baselineIn(CELL_FONT, g.cell, lineHeight);
@@ -1445,9 +1495,15 @@ function drawBlock(block, g, live) {
   const blockNode = el('div', 'blk draw');
   blockNode.dataset.id = block.id;
   blockNode.dataset.height = block.rows * g.period;
-  blockNode.style.height = block.rows * g.period + 'px';
   const frame = el('div', 'frame');
-  frame.style.height = block.rows * g.period - (g.grid ? g.cell * 0.2 : g.gap) + 'px';
+  if (g.down) {
+    // Writing down the page, a box takes whole columns; its height is set with the page's layout.
+    blockNode.style.width = block.rows * g.period + 'px';
+    frame.style.width = block.rows * g.period - g.cell * 0.2 + 'px';
+  } else {
+    blockNode.style.height = block.rows * g.period + 'px';
+    frame.style.height = block.rows * g.period - (g.grid ? g.cell * 0.2 : g.gap) + 'px';
+  }
   const caption = el('div', 'cap', block.caption);
   frame.append(caption);
   blockNode.append(frame);
@@ -1463,7 +1519,9 @@ const AREA_TOP = 2; // matches .ws-area padding-top, so the first line is not cl
 function layoutSheet(sheetView) {
   const { g, area } = sheetView;
   const height = area.clientHeight - AREA_TOP;
-  sheetView.bands = Math.max(0, Math.floor((height - 1 + g.gap) / g.period + 1e-6));
+  sheetView.rows = Math.max(0, Math.floor((height - 1 + g.gap) / g.period + 1e-6));
+  // Written down the page, each line is a column, so the page holds as many lines as columns of squares.
+  sheetView.bands = g.down ? g.cols : sheetView.rows;
   alignCells(sheetView);
   fillPage(sheetView);
   drawRuling(sheetView);
@@ -1474,21 +1532,34 @@ function layoutSheet(sheetView) {
 // Runs after the repeated lines are in place, so the lines left out under a picture box
 // are the ones the box really covers.
 function drawRuling(sheetView) {
-  const { sheet: sheetState, g, area, ruling, bands } = sheetView;
+  const { sheet: sheetState, g, area, ruling, rows: bands } = sheetView;
   const width = area.clientWidth;
   const height = area.clientHeight - AREA_TOP;
   const round = value => Math.round(value * 100) / 100;
-  // Lines under a picture box are left out.
+  // Lines under a picture box are left out (whole columns of squares when writing down).
   const covered = new Set();
   for (const boxNode of $$('.blk.draw', area)) {
-    const first = Math.round((boxNode.offsetTop - AREA_TOP) / g.period);
-    const rows = Math.round(boxNode.offsetHeight / g.period);
-    for (let row = 0; row < rows; row++) covered.add(first + row);
+    const first = g.down ? Math.round((boxNode.offsetLeft - g.gridLeft) / g.period) : Math.round((boxNode.offsetTop - AREA_TOP) / g.period);
+    const count = Math.round((g.down ? boxNode.offsetWidth : boxNode.offsetHeight) / g.period);
+    for (let k = 0; k < count; k++) covered.add(first + k);
   }
   ruling.setAttribute('width', width);
   ruling.setAttribute('height', height);
   ruling.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  if (g.grid) {
+  if (g.grid && g.down) {
+    // Squares, column by column, leaving out the columns under a picture box.
+    const bottom = round(bands * g.cell);
+    let squares = '';
+    for (let col = 0; col < g.cols; col++) {
+      if (covered.has(col)) continue;
+      const left = round(g.gridLeft + col * g.cell), right = round(g.gridLeft + (col + 1) * g.cell);
+      if (col === 0 || covered.has(col - 1)) squares += `M${left} 0V${bottom}`;
+      squares += `M${right} 0V${bottom}`;
+      for (let row = 0; row <= bands; row++) squares += `M${left} ${round(row * g.cell)}H${right}`;
+    }
+    const stroke = Math.min(1.4, Math.max(1, g.cell / 60));
+    ruling.innerHTML = `<path d="${squares}" stroke="${SQUARE_INK}" stroke-width="${stroke}" stroke-linecap="square" fill="none"/>`;
+  } else if (g.grid) {
     // Squares: rows of whole squares across the middle of the page.
     const left = round(g.gridLeft), right = round(g.gridLeft + g.cols * g.cell);
     let squares = '';
@@ -1529,10 +1600,12 @@ function drawRuling(sheetView) {
 }
 
 // Exact height a block takes on the ruled lines (offsetHeight is rounded to whole pixels).
+// Written down the squares, lines are columns, so this is the width the block takes.
 function slotHeight(blockNode) {
   if (blockNode.dataset.height) return +blockNode.dataset.height;
   const lineHeight = +blockNode.dataset.line;
-  return Math.max(1, Math.round(blockNode.offsetHeight / lineHeight)) * lineHeight;
+  const size = blockNode.classList.contains('down') ? blockNode.offsetWidth : blockNode.offsetHeight;
+  return Math.max(1, Math.round(size / lineHeight)) * lineHeight;
 }
 
 // A line marked "fill" repeats down the page, leaving block.fill empty lines at the bottom.
@@ -1554,35 +1627,43 @@ function fillPage(sheetView) {
   for (let i = copies.length; i < wanted; i++) {
     const copy = textBlock(sheetState, block, sheetView.g, sheetView.live);
     copy.classList.add('copy');
-    if (sheetView.g.grid) copy.firstChild.style.width = original.firstChild.style.width;
+    const size = sheetView.g.down ? 'height' : 'width';
+    if (sheetView.g.grid) copy.firstChild.style[size] = original.firstChild.style[size];
     anchor.after(copy);
     anchor = copy;
   }
 }
 
-// Centred words on squares: a line with an odd number of squares left over would sit half a
-// square off the grid, so such a line is made one square narrower.
+// Sets how many squares a line holds: a row across the page, or a column down it.
+// Centred words: a line with an odd number of squares left over would sit half a square off
+// the grid, so such a line is made one square shorter.
 function alignCells(sheetView) {
   const { g, area, sheet: sheetState } = sheetView;
   if (!g.grid) return;
-  const fullWidth = rowWidth(g);
-  const widths = new Map();
+  const size = g.down ? 'height' : 'width';
+  const squares = g.down ? sheetView.rows : g.cols;
+  const full = rowWidth(g, squares);
+  const sizes = new Map();
   for (const blockNode of $$('.blk.cells:not(.copy)', area)) {
     const words = blockNode.firstChild;
-    words.style.width = fullWidth + 'px';
-    let width = fullWidth;
-    if (sheetState.align === 'center' && blockNode.offsetHeight <= +blockNode.dataset.line + 0.5) {
+    words.style[size] = full + 'px';
+    let length = full;
+    const oneLine = (g.down ? blockNode.offsetWidth : blockNode.offsetHeight) <= +blockNode.dataset.line + 0.5;
+    if (sheetState.align === 'center' && oneLine) {
       charRange.selectNodeContents(words);
       const scale = blockNode.getBoundingClientRect().width / blockNode.offsetWidth || 1;
-      const used = Math.round(charRange.getBoundingClientRect().width / scale / g.cell);
-      if ((g.cols - used) % 2) width = rowWidth(g, g.cols - 1);
+      const box = charRange.getBoundingClientRect();
+      const used = Math.round((g.down ? box.height : box.width) / scale / g.cell);
+      if ((squares - used) % 2) length = rowWidth(g, squares - 1);
     }
-    words.style.width = width + 'px';
-    widths.set(blockNode.dataset.id, width);
+    words.style[size] = length + 'px';
+    sizes.set(blockNode.dataset.id, length);
   }
   for (const copy of $$('.blk.cells.copy', area)) {
-    if (widths.has(copy.dataset.id)) copy.firstChild.style.width = widths.get(copy.dataset.id) + 'px';
+    if (sizes.has(copy.dataset.id)) copy.firstChild.style[size] = sizes.get(copy.dataset.id) + 'px';
   }
+  // Writing down, picture boxes are as tall as the columns of squares.
+  if (g.down) for (const frame of $$('.blk.draw .frame', area)) frame.style.height = sheetView.rows * g.cell + 'px';
 }
 
 function checkFit(sheetView) {
@@ -1694,7 +1775,7 @@ function syncFadeInputs() {
     list.replaceChildren();
     for (let index = 0; index < count; index++) {
       const row = el('div', 'fade-row');
-      const label = el('label', '', `Line ${index + 1}`);
+      const label = el('label');
       const input = el('input');
       Object.assign(input, { type: 'number', id: `fade-${index}`, min: 0, max: 100, step: 5, inputMode: 'numeric' });
       input.dataset.index = index;
@@ -1703,7 +1784,9 @@ function syncFadeInputs() {
       list.append(row);
     }
   }
+  const word = editor.view && editor.view.g.down ? 'Column' : 'Line';
   for (const input of $$('input', list)) {
+    input.previousSibling.textContent = `${word} ${+input.dataset.index + 1}`;
     if (document.activeElement !== input) input.value = fadePercent(sheetState, +input.dataset.index);
   }
 }
@@ -1731,6 +1814,18 @@ function showTools(blockNode) {
   for (const button of $$('[data-act="style"]', tools)) button.setAttribute('aria-pressed', String(button.dataset.value === block.style));
   for (const button of $$('[data-act="after"]', tools)) button.setAttribute('aria-pressed', String(+button.dataset.value === block.after));
   for (const button of $$('[data-act="fill"]', tools)) button.setAttribute('aria-pressed', String(!!block.fill));
+  // Written down the squares, lines are columns.
+  const down = !!(editor.view && editor.view.g.down);
+  tools.querySelector('.tg[data-for="text"] .tl').textContent = down ? 'Empty columns' : 'Empty lines';
+  tools.classList.toggle('down', down);
+  for (const button of $$('[data-act="move"]', tools)) {
+    const label = +button.dataset.value < 0 ? (down ? 'Move left' : 'Move up') : (down ? 'Move right' : 'Move down');
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  }
+  tools.querySelector('[data-act="fill"]').title = down
+    ? 'Repeat this line across the page, keeping the last two columns empty'
+    : 'Repeat this line down the page, keeping the last two lines empty';
   tools.hidden = false;
   placeTools();
 }
@@ -1824,7 +1919,9 @@ function buildPanel() {
   const choices = {
     align: ALIGNS,
     ruling: RULINGS,
+    direction: DIRECTIONS,
   };
+  const icons = { align: ALIGN_ICONS, direction: DIRECTION_ICONS };
   for (const group of $$('.seg[data-key]')) {
     const key = group.dataset.key;
     for (const [value, label] of Object.entries(choices[key])) {
@@ -1832,12 +1929,12 @@ function buildPanel() {
       button.type = 'button';
       button.dataset.value = value;
       if (key === 'ruling') button.append(el('span', `swatch ${value}`));
-      if (key === 'align') {
+      if (icons[key]) {
         const icon = svgEl('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true' });
-        icon.append(svgEl('path', { d: ALIGN_ICONS[value] }));
+        icon.append(svgEl('path', { d: icons[key][value] }));
         button.append(icon);
       }
-      button.append(label);
+      button.append(el('span', 'seg-label', label));
       group.append(button);
     }
     group.addEventListener('click', event => {
@@ -1981,10 +2078,15 @@ function syncPanel() {
   }
   $('#size').value = sheetState.size;
   $('#space').value = sheetState.space;
-  // Squares have no gap between rows and need no spacing marks.
+  // Squares have no gap between rows and need no spacing marks, and can be written down the page.
   const { g } = editor.view;
   $('#space').closest('.slider').hidden = !!g.grid;
   $('.panel [data-key="marks"]').closest('.check').hidden = !!g.grid;
+  $('#direction-box').hidden = !g.grid;
+  $('.panel').classList.toggle('down', !!g.down);
+  for (const button of $$('.seg[data-key="align"] button')) {
+    button.querySelector('.seg-label').textContent = (g.down ? ALIGNS_DOWN : ALIGNS)[button.dataset.value];
+  }
   $('#size-out').textContent = g.grid
     ? `${sheetState.size} pt · squares ${Math.round(g.cell / PX_PER_MM)} mm`
     : `${sheetState.size} pt · lines ${Math.round(g.band / PX_PER_MM)} mm tall`;
@@ -2555,7 +2657,8 @@ function updatePrintLabel() {
   $('#print-label').textContent = count > 1 ? `Print ${count} sheets` : 'Print';
 }
 function boundLinesFit(sheetView) {
-  return $$('.blk[data-bind]', sheetView.area).every(node => node.offsetHeight <= +node.dataset.line + 0.5);
+  const size = node => (node.classList.contains('down') ? node.offsetWidth : node.offsetHeight);
+  return $$('.blk[data-bind]', sheetView.area).every(node => size(node) <= +node.dataset.line + 0.5);
 }
 
 window.addEventListener('beforeprint', () => {
