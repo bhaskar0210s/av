@@ -281,6 +281,7 @@ details.more[open] summary { margin-bottom: 8px; }
 /* Written down the squares: lines become columns, filled from the top, the next one to the right. */
 .ws-area.down { writing-mode: vertical-lr; text-orientation: upright; }
 .ws-area.down .blk.draw .cap { writing-mode: horizontal-tb; }
+.ws-area.down .num { text-combine-upright: all; -webkit-text-combine: horizontal; } /* 10 takes one square */
 .panel.down .seg[data-key="align"] svg { transform: rotate(90deg); }
 .panel.down .fade-list { grid-template-columns: 1fr; }
 .tools.down [data-act="move"] svg { transform: rotate(-90deg); }
@@ -1278,6 +1279,21 @@ function paintCells(sheetView, blockNode, strength) {
   const blockTop = g.down && (box.top - areaBox.top) / scale;
   const walker = document.createTreeWalker(blockNode.firstChild, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (g.down && node.parentNode.classList.contains('num')) {
+      // A whole number in one square, made smaller if it would not fit.
+      const rect = node.parentNode.getBoundingClientRect();
+      const x = ((rect.left + rect.right) / 2 - areaBox.left) / scale;
+      const y = ((rect.top + rect.bottom) / 2 - areaBox.top) / scale;
+      const square = Math.floor((x - g.gridLeft) / g.cell);
+      const rowTop = AREA_TOP + Math.floor((y - AREA_TOP) / g.cell) * g.cell;
+      const ink = inkBox(g.fontKey, node.data);
+      const fit = Math.min(1, (0.76 * g.cell) / (ink.width * g.fontPx));
+      const originX = g.gridLeft + (square + 0.5) * g.cell - ink.middle * g.fontPx * fit - blockLeft;
+      const baselineY = rowTop + (g.cell + g.xh * fit) / 2 - blockTop;
+      if (solid) letters.push([node.data, originX, baselineY, fit]);
+      else d += dotPath(glyphDots(g.fontKey, node.data, style.spacing / fit), originX, baselineY, g.fontPx * fit, radius);
+      continue;
+    }
     let at = 0;
     for (const part of graphemes(node.data)) {
       const start = at;
@@ -1312,8 +1328,9 @@ function paintCells(sheetView, blockNode, strength) {
   flushWord();
   if (solid) {
     svg.style.font = `${g.font.weight} ${g.fontPx}px ${g.font.css}`;
-    svg.replaceChildren(...letters.map(([text, x, y]) => {
+    svg.replaceChildren(...letters.map(([text, x, y, fit = 1]) => {
       const letter = svgEl('text', { x: x.toFixed(2), y: y.toFixed(2), fill: 'currentColor' });
+      if (fit < 1) letter.setAttribute('font-size', (g.fontPx * fit).toFixed(2));
       letter.textContent = text;
       return letter;
     }));
@@ -1325,19 +1342,111 @@ function paintCells(sheetView, blockNode, strength) {
 
 // Middle of a letter's ink, in em from where it starts, so it can be put in the middle of a square.
 const inkCache = new Map();
-function inkMiddle(fontKey, text) {
+// Also its width, in em, so a whole number can be made to fit in one square.
+function inkBox(fontKey, text) {
   const cacheKey = fontKey + '|' + text;
   if (inkCache.has(cacheKey)) return inkCache.get(cacheKey);
   const font = FONTS[fontKey];
   if (!rasterContext) rasterContext = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   rasterContext.font = `${font.weight} ${RASTER_PX}px ${font.css}`;
   const box = rasterContext.measureText(text);
-  const middle = Number.isFinite(box.actualBoundingBoxRight)
-    ? (box.actualBoundingBoxRight - box.actualBoundingBoxLeft) / 2 / RASTER_PX
-    : box.width / 2 / RASTER_PX;
+  const ink = Number.isFinite(box.actualBoundingBoxRight)
+    ? { middle: (box.actualBoundingBoxRight - box.actualBoundingBoxLeft) / 2 / RASTER_PX, width: (box.actualBoundingBoxRight + box.actualBoundingBoxLeft) / RASTER_PX }
+    : { middle: box.width / 2 / RASTER_PX, width: box.width / RASTER_PX };
   if (inkCache.size > 800) inkCache.clear();
-  inkCache.set(cacheKey, middle);
-  return middle;
+  inkCache.set(cacheKey, ink);
+  return ink;
+}
+const inkMiddle = (fontKey, text) => inkBox(fontKey, text).middle;
+
+// Writing down the squares, a number stays whole in one square, so 10 goes under 9 instead of
+// a 1 and then a 0. A run of digits that counts (12345678910, 2468101214, 101010) is read as
+// its numbers; two digits on their own are one number; any other run is one digit per square.
+function digitGroups(run) {
+  return countedNumbers(run) || (run.length === 2 ? [run] : [...run]);
+}
+function countedNumbers(run) {
+  const whole = part => part === '0' || part[0] !== '0';
+  for (let a = 1; a <= 3; a++) {
+    for (let b = 1; b <= 3 && a + b <= run.length; b++) {
+      const first = run.slice(0, a), second = run.slice(a, a + b);
+      if (!whole(first) || !whole(second)) continue;
+      const step = +second - +first;
+      const parts = [first, second];
+      let at = a + b, complete = 2;
+      for (let next = +second + step; at < run.length && next >= 0; next += step) {
+        const want = String(next);
+        if (run.startsWith(want, at)) {
+          parts.push(want);
+          at += want.length;
+          complete++;
+          continue;
+        }
+        if (want.startsWith(run.slice(at))) { parts.push(run.slice(at)); at = run.length; } // still being typed
+        break;
+      }
+      if (at === run.length && complete >= 3) return parts;
+    }
+  }
+  return null;
+}
+const isNumberGroup = part => part.length > 1 && /^\d+$/.test(part);
+function cellUnits(text) {
+  const units = [];
+  for (const piece of text.match(/\d+|\D+/g) || []) {
+    if (/^\d/.test(piece)) units.push(...digitGroups(piece));
+    else units.push(piece);
+  }
+  return units;
+}
+// The words of a line written down the squares: each whole number is a span sharing one square.
+function setCellWords(words, text) {
+  const nodes = [];
+  let plain = '';
+  for (const unit of cellUnits(text)) {
+    if (!isNumberGroup(unit)) { plain += unit; continue; }
+    if (plain) nodes.push(document.createTextNode(plain));
+    plain = '';
+    nodes.push(el('span', 'num', unit));
+  }
+  if (plain) nodes.push(document.createTextNode(plain));
+  words.replaceChildren(...nodes);
+}
+function cellWordsMatch(words, text) {
+  const want = cellUnits(text).map(unit => (isNumberGroup(unit) ? `[${unit}]` : unit)).join('');
+  const have = [...words.childNodes].map(node => (node.nodeType === 1 && node.classList.contains('num') ? `[${node.textContent}]` : node.textContent)).join('');
+  return want === have;
+}
+// Regroups the numbers of the line being typed in, keeping the cursor where it was in the text.
+function regroupTyped(words, text) {
+  if (cellWordsMatch(words, text)) return;
+  const selection = getSelection();
+  let offset = -1;
+  if (selection.rangeCount && words.contains(selection.anchorNode)) {
+    const before = document.createRange();
+    before.selectNodeContents(words);
+    before.setEnd(selection.anchorNode, selection.anchorOffset);
+    offset = before.toString().length;
+  }
+  setCellWords(words, text);
+  if (offset < 0) return;
+  const caret = document.createRange();
+  caret.selectNodeContents(words);
+  caret.collapse(false);
+  let left = offset;
+  for (const node of words.childNodes) {
+    const length = node.textContent.length;
+    if (left <= length) {
+      if (node.nodeType === 3) caret.setStart(node, left);
+      else if (left === 0) caret.setStartBefore(node);
+      else caret.setStartAfter(node);
+      caret.collapse(true);
+      break;
+    }
+    left -= length;
+  }
+  selection.removeAllRanges();
+  selection.addRange(caret);
 }
 
 /* ---------- Editable text ---------- */
@@ -1456,6 +1565,7 @@ function textBlock(sheetState, block, g, live) {
     });
     blockNode.style.setProperty('--glyph', g.fontPx + 'px');
     Object.assign(words.style, { padding: '0', minHeight: '', minWidth: lineHeight + 'px' });
+    setCellWords(words, words.textContent);
   } else if (g.grid) {
     // Laid out one square per letter, starting at the first square of the row. The shift puts the
     // cursor over the first row of squares; the letters are drawn on the baseline in dataset.baseline.
@@ -1729,6 +1839,17 @@ function blockTextChanged(block, blockNode, value) {
 
 // Puts the latest words in every line that shows them (linked names, repeated lines),
 // then refreshes the repeats, the dots and the fit.
+// Typing with an input method (phone keyboards, Kannada keyboards) composes a word before it is
+// final; written down the squares, the numbers are regrouped once it is.
+let composing = false;
+document.addEventListener('compositionstart', () => { composing = true; });
+document.addEventListener('compositionend', () => {
+  composing = false;
+  const focused = document.activeElement;
+  const blockNode = focused && focused.closest && focused.closest('.blk.down');
+  if (blockNode && editor.view && editor.view.g.down) syncText(blockNode);
+});
+
 function syncText(typedInto) {
   const view = editor.view;
   const sheetState = view.sheet;
@@ -1750,10 +1871,19 @@ function syncText(typedInto) {
     return;
   }
   for (const blockNode of $$('.blk.text', view.area)) {
-    if (blockNode === typedInto) continue;
     const block = sheetState.blocks.find(item => item.id === blockNode.dataset.id);
     if (!block) continue;
     const value = block.bind ? sheetState[block.bind] : block.text;
+    if (view.g.down) {
+      // Written down the squares, whole numbers share a square, so they are regrouped as they change.
+      if (blockNode !== typedInto) {
+        if (!cellWordsMatch(blockNode.firstChild, value)) setCellWords(blockNode.firstChild, value);
+      } else if (!composing) {
+        regroupTyped(blockNode.firstChild, value);
+      }
+      continue;
+    }
+    if (blockNode === typedInto) continue;
     if (blockNode.firstChild.textContent !== value) blockNode.firstChild.textContent = value;
   }
   alignCells(view);
