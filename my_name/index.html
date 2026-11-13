@@ -21,7 +21,7 @@
   --brand-dark: #003a88;
   --brand-soft: #e7eefa;
   --danger: #b42318;
-  --comic: "Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo 2", "Baloo Tamma 2", cursive;
+  --comic: "AV Kid Digits", "Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo 2", "Baloo Tamma 2", cursive;
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -137,6 +137,8 @@ textarea.input { height: auto; padding: 9px 12px; resize: vertical; line-height:
 .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
 .seg svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .seg .swatch { width: 16px; height: 12px; flex: none; }
+/* Three kinds of lines: the picture goes above the name so they fit side by side. */
+.seg[data-key="ruling"] button { flex-direction: column; gap: 5px; padding: 8px 4px 7px; }
 .seg .swatch.four {
   background:
     linear-gradient(#cf3a32 0 0) 0 0 / 100% 1.6px no-repeat,
@@ -148,6 +150,13 @@ textarea.input { height: auto; padding: 9px 12px; resize: vertical; line-height:
   background:
     linear-gradient(#3283cf 0 0) 0 2.4px / 100% 1.6px no-repeat,
     linear-gradient(#3283cf 0 0) 0 8px / 100% 1.6px no-repeat;
+}
+.seg .swatch.squares {
+  width: 15px; height: 11px;
+  background:
+    linear-gradient(90deg, #3283cf 1.2px, transparent 1.2px) 0 0 / 4.6px 100%,
+    linear-gradient(#3283cf 1.2px, transparent 1.2px) 0 0 / 100% 4.6px;
+  box-shadow: inset -1.2px -1.2px 0 #3283cf;
 }
 .fade-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
 .fade-row { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
@@ -266,7 +275,10 @@ details.more[open] summary { margin-bottom: 8px; }
 }
 .blk.model .txt { color: var(--ws-ink); }
 .blk.t-dots .txt { color: transparent; }
-.blk .dots { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.blk .dots { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; user-select: none; -webkit-user-select: none; }
+/* Squares: the words are laid out one square per letter with empty glyphs, and the letters are drawn over them. */
+.blk.text.cells .txt { color: transparent; }
+.blk.text.cells .txt:empty::before { font-family: var(--comic); font-size: var(--glyph); }
 .blk.draw .frame { position: relative; background: #fff; border: 1.6px solid #3b4456; border-radius: 3mm; outline: none; }
 .blk.draw .cap { position: absolute; left: 4mm; right: 4mm; top: 3mm; font-size: 14px; line-height: 1.3; color: #5f6878; }
 
@@ -517,12 +529,56 @@ const newId = () => Date.now().toString(36) + (idCounter++).toString(36);
 
 /* ---------- Font, lines and dots ---------- */
 // Comic Sans for English; the rounded Baloo fonts fill in Hindi (Baloo 2) and Kannada (Baloo Tamma 2).
-const COMIC = '"Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo 2", "Baloo Tamma 2", cursive';
+// "AV Kid Digits" comes first but only has 1 and 4, drawn the way children write them.
+const COMIC = '"AV Kid Digits", "Comic Sans MS", "Comic Sans", "Comic Neue", "Baloo 2", "Baloo Tamma 2", cursive';
 const FONTS = {
   comic: { label: 'Comic Sans', css: COMIC, weight: 400, dotGap: 0.078, dotRadius: 0.021, spur: 0.05 },
 };
 const LINE_INK = { outer: '#cf3a32', inner: '#3283cf' }; // red and blue
-const RULINGS = { four: 'Four lines', double: 'Double line' };
+const RULINGS = { four: 'Four lines', double: 'Double line', squares: 'Squares' };
+
+// Squares, like a maths square-line notebook: every letter or number gets a square of its own.
+// The words are laid out in "AV Cells", whose glyphs are empty and exactly one square wide,
+// and the letters are drawn in the middle of their squares.
+const CELL_FONT = { css: '"AV Cells", ' + COMIC, weight: 400 };
+const CELL_ASC = 0.8;      // AV Cells ascent, so the cursor fills the square
+const SQUARE_FILL = 0.66;  // numbers are this tall, as a share of the square
+const SQUARE_INK = '#5b95d4';
+// Characters that AV Cells makes one square wide (keep in step with tools/make_fonts.py).
+const CELL_TEXT = /^[\x20-\x7e\xa0-\xff\u2010-\u2027\u2190-\u2193\u2212\u2215\u2219\u221a\u2260\u2264\u2265\u25a1\u25cb]/;
+const AREA_WIDTH = (210 - 2 * 13) * PX_PER_MM; // the width of .ws-area: the A4 page less its side padding
+
+/* fonts:start (made by tools/make_fonts.py) */
+const FONT_DATA = {
+  kidSans400: 'd09GMgABAAAAAAJEAAoAAAAABLwAAAH7AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAAPAqCSIIXATYCJAMMCwgABCAFgnEHKBvRAwAehXHDHUNbb76jmF+2EvFAf7X3771oazy0QJvEukHjPEswotuH/NN3/xdCoEtBbZQ3eE3aidqFlcMONsA/NMKJc+mibYCRPJDdaIjbRxW1vqdO/9vo297So8Sf7M2tMdgUH+Lp1rkeEfSK+kU5t3CFIgVgDBxfYbwUZ3Diutv/NegLmAQAtbI5ggSWWKTTCiRgLRBMlmoh3+tdIQAIWEAFDWzBBUAGRAw25xmuV2/TbqnUbtNqK1pz26Zyi0VJvsx9R7pqvVLV0i2RqY2OfaStx2ZNfYzK25SiqHK8WXcRwJGAjlli37azlQ6lxdvMDKRJoXgLzedjvvirtm9q2UPynS/6ruubXPYUC99R1vT8QkKPzqm7/ohKLs6hfV8PoYcXlqQhnLaLQyW+2kbMoR6n4hr8moS6OHRvfAGADQIC7E51T1navu8qbAf4W7Dd6+PcIT+UjAAJAwhwseL5xQDcF4CAVko3pLfgNktNQOKOHRLBock0CCDQBF+IlGkKiSEDbRYKTbRY6Z+pk+QeYSZKBIaWPIElVaNVEBSZWdipRGQ7KJETU5LP+fO2cN17uAbjYY65n8NzTvaOYLIsdSlq9y8jSCKOGCXycYQqUaREvTqxChRpUC4H145TlYkK1KrbVKUShxN7jmjlcZXBomc3BgNc91nAGA==',
+  kidSans700: 'd09GMgABAAAAAAI0AAoAAAAABJwAAAHrAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAAPAqCSIIXATYCJAMICwgABCAFglYHKBuyA2AuBlM4XxhHXs+8FUYY+UcJFQE19vs9QVyqS2kksRLEk2TIpACNiofEt5L+vD/uV+9vBq1GUWRgVdMKF8iOF91ZAx4dnV3u8cgkRhVvlq3iDpxTF6UDXosNh5hNxfGfDzS9Rhm9bfbiSPGLfRi7qCH+opx/4opkQRqon2C8FI7GqEo//oddEAPJXrA5IqERWrBCjFGguAhiI8pCAfi9wnvhVQAQJFCMEuwAZwBkEEUp5/pwOfmobrGkq3b4dL8sPbGPpvLN87r8zLv0FnvTjXTj9yFHF9Yn+XbpvsIVQkuSNDPpQmG3lipw8Kq23gZwDb8Jvua6+VPUdo3m6zfDl0nZYIh5LhXReVw2GqLezo+iotlpTaebVXXZRHXWX5sC8+Wuu7isQ50oDu97FZuoo/1+UFeqg2a9AABbEATKHzdCOfr/pakU/OtM5xmHVZO/iwEiiSAwppL8UxqoXiAITihFnYSARiXT0EMi2FbpXgBBFTlMlFUxST2mODNFqgy0F6slgxZymaCdDTBRqU0mGVQUZ6ZIu8POYr2Oa1F2sFFm/3KbO7pYsFnEZVNj0zuTS2RBLq8QnUDi/w12UWxBDWVsLg01DWMjDj1tlURsLoyqGBpt6ulik5OQRUrtOmsyXDwGStDnIpcF',
+  kidNeue400: 'd09GMgABAAAAAAJAAAoAAAAABLwAAAH1AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAAPAqCSIILATYCJAMMCwgABCAFgnEHKBvFAyAuCuyGY8NQaUBrHJf/TvjQJwKGiIfnD3/nvvv+nvRp2iricFmaQEBFHEEe5vM/7r0f8jsvfXgwEuwIRSWzMe0sqS2k/ZAWFwAN8A+NsEtMrNVNnEuXmAIpthsNsYO2D2t9T51/Gn0DpT6V+AM9SJpbY+IUBfFU12mPCHpFPaOarYx1cFSQBvUjjBfiFRfh+/4/Q5nDrACoHawvSMyxROGzHUGzFMomtSKP630IACFBEy28wgdABUWRla3E+aJJ2XiPRCCebD3jwHGi37A3HXvoPDVtN/Ln7MfCxbqLIZh3nYmWHCeTXCPKS6pkvYsDrlQVKR5d2C4B532hu1RUceg9hP5veSLXv7ObbKchOZHn392pbIfx8XcjVZpMlBrHAO1UUki+nEiKS41QhVBL/rk0WTHTZbX8+ays1vMVADwzEPy8dV8ri/9b8gH/ZtbccL8S5CenC5AKCK5Pkn8EoGQOGNDOdKEkOXekF3hiID1igQLv3vcNBggDBChaBgKkBTUGqFO6YeBUbpqdqDuqAGErR+hi6I1OZ/3CSjdsbW9t2ntIqSR57U3kZ9uCwVdvDZsDosajdxbw+iGTFK971PMvI6WSyGtvItLbW9uHBkubW4e76qlFJPIrmwcG1/X2EAFe/kbZRg/DQcwzAhP0W8vVAQAA',
+  kidNeue700: 'd09GMgABAAAAAAIsAAoAAAAABKAAAAHgAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAAPAqCSIILATYCJAMMCwgABCAFglYHKBuqAyCOw3R7I9skSTjCXHgIHvo1833YHCBuDgAdApRJoTzQrcr4AhqRqVAEBLb7uw1SzUYQSSuWmJq4pn6VSCQ/yOMjRm3/bbtx23j2Oo0yWluVzSc+sRm7dIIoOcaOz1rtscf2i+jokjYMGg1CyEcYL+W5DNnj898zlAWyDUSRACWrgG8kolpLBJa6IDdp/P/A9/5/+v8BAQBAUAAswAEMgxUAoAFIkkrtzfdddjy25t2cXHcmznJemCehjxNHj3NfWk8jno04HiYeO1+r+4TTUdKZy3XzZEdPokbR69GHnAjdvYXBGwu7jRh1sbsku8F+bOdy03P5uXyePUvI/zkgVro/Me/HhzbfvTPh5148l/2VaUuAtWICeteyDd3cljLb1iEDo6s/BxgkgICtzJABj+KvjsoRgC+h6vDwvnKobdQgKBKAwPUp1BMA5QsQ2FURR2OK7oq0Aii51BDJHnL1iAAguGEoSpqbqHjz0mvR4CbmsIWndIpIJ4Rg5UaUHHWLSqxhvRYNwS7ttIj0fLZH1kyNRv5sW7jymmB5Loz03kN3LSM1nabCcq6DUv43FdpFqjFlVKRqUyZMWbWi0oJZoiwyqtuNWbayacG8SBlSpTfWBm4oBzxlDInu/RMGAAAAAA==',
+  cells: 'd09GMgABAAAAAAHkAAoAAAAABXgAAAGbAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAAhEIKKEABNgIkAwYLBgAEIAWCRwcrG9MEQL4NdyxO4s8OSJTahMJsYXeM+4TGf1Jwb4PZJIQTxwP+fq/nQgH49Sd1SKqprKOBAub4sd6UW6bITpHed2NdBoPracFt4YVgsAOg3AB7AIDnf/I+ADeIDaTkjiErC9UQErzLygqrcca0/6VIya7/dUt3b6IHmG8a0nV7wiWWN75kgXzaCajAA0ooEM3ctRpbHqtDuvyUfPAWOZVjKmSI3idR7Jf/wfjQWz3yiR0I33sQUoCIhHZJiKtzHEe3Zkm1uztm+DlLHaXe0v5SI/dXeN0MP+F4j/UO8P3nPd/f+LK/Crp9Do8hvGt/dyDYkyGCjIhq1AIyiORcV9GSpfEw7X9BQMD83bV9TftfUhl+9KvnDkuPE5IIAiu7K/PssC+gQ+AoAqJqEfo4qt4rAQTVjBBVqUbSrMnNqNBgiK7UZFQSco2g2YogarSOpLDXzajQ68a60qDn6/346qayukxFrg4pM+OTSOki6bFvWN1VWDty+vSljSPHrpw+4FuFh+06cvHSiXNnC1PGTdZ8bmNJYzsiLCIh5o0GAA==',
+};
+/* fonts:end */
+
+// The kid digits come in two sets, matched to Comic Sans or, where it is missing (phones and
+// tablets), to Comic Neue.
+const fontFaces = [];
+function installFonts() {
+  if (typeof FontFace !== 'function' || !document.fonts) return;
+  const set = hasComicSans() ? 'kidSans' : 'kidNeue';
+  const source = data => `url(data:font/woff2;base64,${data}) format("woff2")`;
+  for (const weight of ['400', '700']) {
+    fontFaces.push(new FontFace('AV Kid Digits', source(FONT_DATA[set + weight]), { weight, unicodeRange: 'U+31, U+34' }));
+  }
+  fontFaces.push(new FontFace('AV Cells', source(FONT_DATA.cells)));
+  for (const face of fontFaces) document.fonts.add(face);
+}
+function hasComicSans() {
+  const context = document.createElement('canvas').getContext('2d');
+  const sample = 'mmmmmmmmmmlliI1W';
+  context.font = '72px monospace';
+  const plain = context.measureText(sample).width;
+  context.font = '72px "Comic Sans MS", "Comic Sans", monospace';
+  return context.measureText(sample).width !== plain;
+}
 const SCRIPT_LETTERS = { kannada: /[ಀ-೿]/g, hindi: /[ऀ-ॿ꣠-ꣿ]/g };
 const ALIGNS = { left: 'Left', center: 'Centre', right: 'Right' };
 const ALIGN_ICONS = {
@@ -707,8 +763,8 @@ function save() {
 // asc: where the top line goes, xh: top of the letter body, desc: how far tails hang below the baseline.
 const SCRIPT_SAMPLES = {
   latin: {
-    tall: [[...'bdhkl'], [...'BDEHKLT']], body: [...'xzvwu'], tails: [...'gjpqy'],
-    fallback: { asc: 0.76, xh: 0.52, desc: 0.22 },
+    tall: [[...'bdhkl'], [...'BDEHKLT']], body: [...'xzvwu'], tails: [...'gjpqy'], digits: [...'0123456789'],
+    fallback: { asc: 0.76, xh: 0.52, desc: 0.22, digits: 0.76 },
   },
   // Kannada: letters with a talekattu (and vowel signs) reach the top line, the body sits on the
   // two middle lines, and ottaksharas hang below the baseline.
@@ -738,7 +794,9 @@ function measureFonts() {
     const byScript = {};
     for (const [script, sample] of Object.entries(SCRIPT_SAMPLES)) {
       let measured = { asc: round(Math.max(...sample.tall.map(up))), xh: round(up(sample.body)), desc: round(down(sample.tails)) };
-      if (!(measured.asc > measured.xh && measured.xh > 0.1 && measured.desc > 0.05)) measured = sample.fallback;
+      if (sample.digits) measured.digits = round(up(sample.digits)); // how tall numbers are, for squares
+      const sensible = measured.asc > measured.xh && measured.xh > 0.1 && measured.desc > 0.05;
+      if (!sensible || (sample.digits && !(measured.digits > 0.3))) measured = sample.fallback;
       byScript[script] = measured;
     }
     if (JSON.stringify(byScript) !== JSON.stringify(metrics[key])) changed = true;
@@ -769,6 +827,17 @@ function geometry(sheetState) {
   const script = sheetScript(sheetState);
   const fontMetrics = metrics[sheetState.font][script];
   const fontPx = sheetState.size * PX_PER_PT;
+  if (sheetState.ruling === 'squares') {
+    // Rows of squares with no gap between them. Numbers sit in the middle of their square.
+    const digits = metrics[sheetState.font].latin.digits * fontPx;
+    const cell = digits / SQUARE_FILL;
+    const cols = Math.max(1, Math.floor((AREA_WIDTH - 2) / cell));
+    return {
+      font, fontKey: sheetState.font, script, fontPx, grid: true, cell, cols,
+      gridLeft: (AREA_WIDTH - cols * cell) / 2,
+      asc: (cell + digits) / 2, xh: digits, desc: (cell - digits) / 2, band: cell, gap: 0, period: cell,
+    };
+  }
   const asc = fontMetrics.asc * fontPx;
   const xh = fontMetrics.xh * fontPx;
   const desc = fontMetrics.desc * fontPx;
@@ -776,6 +845,23 @@ function geometry(sheetState) {
   const gap = band * sheetState.space;
   return { font, fontKey: sheetState.font, script, fontPx, asc, xh, desc, band, gap, period: band + gap };
 }
+
+// Browsers round glyph widths a little, which adds up along a row of squares. The difference,
+// measured once per square size, is put back with letter-spacing so each letter keeps to its square.
+const spacingCache = new Map();
+function cellSpacing(cell) {
+  if (spacingCache.has(cell)) return spacingCache.get(cell);
+  const ruler = el('span', 'probe', '.'.repeat(40));
+  Object.assign(ruler.style, { fontFamily: CELL_FONT.css, fontWeight: CELL_FONT.weight, fontSize: cell + 'px', letterSpacing: '0' });
+  document.body.append(ruler);
+  const width = ruler.getBoundingClientRect().width / 40;
+  ruler.remove();
+  const spacing = width > cell * 0.95 && width < cell * 1.05 ? Math.round((cell - width) * 1000) / 1000 : 0;
+  spacingCache.set(cell, spacing);
+  return spacing;
+}
+// A row is a whole number of squares, with a pixel to spare so the last square never wraps.
+const rowWidth = (g, squares = g.cols) => squares * g.cell + 1;
 
 // Distance from the top of a line box to the text baseline, measured by the browser itself.
 let probe = null;
@@ -1024,11 +1110,14 @@ function paintTracing(sheetView) {
     const strength = sheetView.sheet.fade ? fadePercent(sheetView.sheet, index) / 100 : 1;
     paintDots(sheetView, node, strength);
   });
+  // On squares the solid lines are drawn too, one letter in the middle of each square.
+  if (sheetView.g.grid) for (const node of $$('.blk.model', sheetView.area)) paintCells(sheetView, node, 1);
   sheetView.tracedLines = traced.length;
 }
 
 const charRange = document.createRange();
 function paintDots(sheetView, blockNode, strength = 1) {
+  if (sheetView.g.grid) return paintCells(sheetView, blockNode, strength);
   const svg = blockNode.querySelector('svg.dots');
   if (!svg) return;
   svg.setAttribute('width', blockNode.offsetWidth);
@@ -1072,6 +1161,94 @@ function paintDots(sheetView, blockNode, strength = 1) {
   flushWord();
   const opacity = style.opacity < 1 ? ` fill-opacity="${style.opacity.toFixed(2)}"` : '';
   svg.innerHTML = d ? `<path fill="${DOT_INK}"${opacity} d="${d}"/>` : '';
+}
+
+// Squares: each letter or number is drawn in the middle of the square it was laid out in,
+// dotted on traced lines and solid on the others. Letters that are not one square wide
+// (Kannada or Hindi) are drawn word by word where they were laid out.
+const graphemes = typeof Intl === 'object' && Intl.Segmenter
+  ? (() => { const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' }); return text => [...segmenter.segment(text)].map(part => part.segment); })()
+  : text => [...text];
+function paintCells(sheetView, blockNode, strength) {
+  const svg = blockNode.querySelector('svg.dots');
+  if (!svg) return;
+  svg.setAttribute('width', blockNode.offsetWidth);
+  svg.setAttribute('height', blockNode.offsetHeight);
+  const solid = !blockNode.classList.contains('trace');
+  if (!solid && strength <= 0) { svg.replaceChildren(); return; }
+  const { g } = sheetView;
+  const style = dotStyle(strength);
+  const lineHeight = +blockNode.dataset.line;
+  const baseline = +blockNode.dataset.baseline;
+  const box = blockNode.getBoundingClientRect();
+  const scale = box.width / blockNode.offsetWidth || 1;
+  const radius = Math.max(0.6, g.font.dotRadius * g.fontPx) * style.size;
+  let d = '';
+  const letters = [];
+  const draw = (text, x, line, centred) => {
+    const originX = centred ? x - inkMiddle(g.fontKey, text) * g.fontPx : x;
+    const y = line * lineHeight + baseline;
+    if (solid) letters.push([text, originX, y]);
+    else d += dotPath(glyphDots(g.fontKey, text, style.spacing), originX, y, g.fontPx, radius);
+  };
+  let word = null;
+  const flushWord = () => {
+    if (word) draw(word.text, word.x, word.line, false);
+    word = null;
+  };
+  const walker = document.createTreeWalker(blockNode.firstChild, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    let at = 0;
+    for (const part of graphemes(node.data)) {
+      const start = at;
+      at += part.length;
+      if (/^\s+$/.test(part)) { flushWord(); continue; }
+      charRange.setStart(node, start);
+      charRange.setEnd(node, at);
+      const rect = charRange.getClientRects()[0];
+      if (!rect) continue;
+      const line = Math.floor(((rect.top + rect.bottom) / 2 - box.top) / scale / lineHeight);
+      if (CELL_TEXT.test(part)) {
+        flushWord();
+        const square = Math.floor((((rect.left + rect.right) / 2 - box.left) / scale - g.gridLeft) / g.cell);
+        draw(part, g.gridLeft + (square + 0.5) * g.cell, line, true);
+      } else if (word && word.line === line) {
+        word.text += part;
+      } else {
+        flushWord();
+        word = { text: part, x: (rect.left - box.left) / scale, line };
+      }
+    }
+  }
+  flushWord();
+  if (solid) {
+    svg.style.font = `${g.font.weight} ${g.fontPx}px ${g.font.css}`;
+    svg.replaceChildren(...letters.map(([text, x, y]) => {
+      const letter = svgEl('text', { x: x.toFixed(2), y: y.toFixed(2), fill: 'currentColor' });
+      letter.textContent = text;
+      return letter;
+    }));
+  } else {
+    const opacity = style.opacity < 1 ? ` fill-opacity="${style.opacity.toFixed(2)}"` : '';
+    svg.innerHTML = d ? `<path fill="${DOT_INK}"${opacity} d="${d}"/>` : '';
+  }
+}
+
+// Middle of a letter's ink, in em from where it starts, so it can be put in the middle of a square.
+const inkCache = new Map();
+function inkMiddle(fontKey, text) {
+  const cacheKey = fontKey + '|' + text;
+  if (inkCache.has(cacheKey)) return inkCache.get(cacheKey);
+  const font = FONTS[fontKey];
+  if (!rasterContext) rasterContext = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  rasterContext.font = `${font.weight} ${RASTER_PX}px ${font.css}`;
+  const box = rasterContext.measureText(text);
+  const middle = Number.isFinite(box.actualBoundingBoxRight)
+    ? (box.actualBoundingBoxRight - box.actualBoundingBoxLeft) / 2 / RASTER_PX
+    : box.width / 2 / RASTER_PX;
+  if (inkCache.size > 800) inkCache.clear();
+  inkCache.set(cacheKey, middle);
+  return middle;
 }
 
 /* ---------- Editable text ---------- */
@@ -1162,26 +1339,43 @@ function blankField(owner, key, kind, live) {
 
 function textBlock(sheetState, block, g, live) {
   const lineHeight = g.period * (1 + block.after);
-  const baseline = baselineIn(g.font, g.fontPx, lineHeight);
   const traced = block.style === 'trace';
-  const blockNode = el('div', `blk text ${traced ? 'trace t-dots' : 'model'}`);
+  const blockNode = el('div', `blk text ${traced ? 'trace t-dots' : 'model'}${g.grid ? ' cells' : ''}`);
   blockNode.dataset.id = block.id;
   if (block.bind) blockNode.dataset.bind = block.bind;
   blockNode.dataset.line = lineHeight;
-  blockNode.dataset.baseline = baseline;
-  Object.assign(blockNode.style, {
-    fontFamily: g.font.css,
-    fontWeight: g.font.weight,
-    fontSize: g.fontPx + 'px',
-    lineHeight: lineHeight + 'px',
-    // Every line box is the same height, so one shift puts every baseline on the second blue line.
-    top: (g.asc - baseline) + 'px',
-  });
   const words = el('div', 'txt', block.bind ? sheetState[block.bind] : block.text);
   words.style.minHeight = lineHeight + 'px';
   words.style.textAlign = sheetState.align;
+  if (g.grid) {
+    // Laid out one square per letter, starting at the first square of the row. The shift puts the
+    // cursor over the first row of squares; the letters are drawn on the baseline in dataset.baseline.
+    const baseline = baselineIn(CELL_FONT, g.cell, lineHeight);
+    blockNode.dataset.baseline = baseline - CELL_ASC * g.cell + g.asc;
+    Object.assign(blockNode.style, {
+      fontFamily: CELL_FONT.css,
+      fontWeight: CELL_FONT.weight,
+      fontSize: g.cell + 'px',
+      letterSpacing: cellSpacing(g.cell) + 'px',
+      lineHeight: lineHeight + 'px',
+      top: (CELL_ASC * g.cell - baseline) + 'px',
+    });
+    blockNode.style.setProperty('--glyph', g.fontPx + 'px');
+    Object.assign(words.style, { padding: '0', marginLeft: g.gridLeft + 'px', width: rowWidth(g) + 'px' });
+  } else {
+    const baseline = baselineIn(g.font, g.fontPx, lineHeight);
+    blockNode.dataset.baseline = baseline;
+    Object.assign(blockNode.style, {
+      fontFamily: g.font.css,
+      fontWeight: g.font.weight,
+      fontSize: g.fontPx + 'px',
+      lineHeight: lineHeight + 'px',
+      // Every line box is the same height, so one shift puts every baseline on the second blue line.
+      top: (g.asc - baseline) + 'px',
+    });
+  }
   blockNode.append(words);
-  if (traced) blockNode.append(svgEl('svg', { class: 'dots', 'aria-hidden': 'true' }));
+  if (traced || g.grid) blockNode.append(svgEl('svg', { class: 'dots', 'aria-hidden': 'true' }));
   if (live) {
     makeEditable(words, { singleLine: !!block.bind, placeholder: 'Type here', onChange: value => blockTextChanged(block, blockNode, value) });
   }
@@ -1194,7 +1388,7 @@ function drawBlock(block, g, live) {
   blockNode.dataset.height = block.rows * g.period;
   blockNode.style.height = block.rows * g.period + 'px';
   const frame = el('div', 'frame');
-  frame.style.height = block.rows * g.period - g.gap + 'px';
+  frame.style.height = block.rows * g.period - (g.grid ? g.cell * 0.2 : g.gap) + 'px';
   const caption = el('div', 'cap', block.caption);
   frame.append(caption);
   blockNode.append(frame);
@@ -1208,10 +1402,22 @@ function drawBlock(block, g, live) {
 // Needs the sheet to be in the document: draws the lines, the dots, and checks the fit.
 const AREA_TOP = 2; // matches .ws-area padding-top, so the first line is not clipped
 function layoutSheet(sheetView) {
-  const { sheet: sheetState, g, area, ruling } = sheetView;
+  const { g, area } = sheetView;
+  const height = area.clientHeight - AREA_TOP;
+  sheetView.bands = Math.max(0, Math.floor((height - 1 + g.gap) / g.period + 1e-6));
+  alignCells(sheetView);
+  fillPage(sheetView);
+  drawRuling(sheetView);
+  paintTracing(sheetView);
+  return checkFit(sheetView);
+}
+
+// Runs after the repeated lines are in place, so the lines left out under a picture box
+// are the ones the box really covers.
+function drawRuling(sheetView) {
+  const { sheet: sheetState, g, area, ruling, bands } = sheetView;
   const width = area.clientWidth;
   const height = area.clientHeight - AREA_TOP;
-  const bands = Math.max(0, Math.floor((height - 1 + g.gap) / g.period + 1e-6));
   const round = value => Math.round(value * 100) / 100;
   // Lines under a picture box are left out.
   const covered = new Set();
@@ -1220,36 +1426,47 @@ function layoutSheet(sheetView) {
     const rows = Math.round(boxNode.offsetHeight / g.period);
     for (let row = 0; row < rows; row++) covered.add(first + row);
   }
-  // Four lines: red top, blue body top, blue baseline, red bottom.
-  // Double line: just the two blue lines around the letter body.
-  const double = sheetState.ruling === 'double';
-  let outer = '', inner = '', marks = '';
-  const markStep = g.band * 0.62;
-  for (let i = 0; i < bands; i++) {
-    if (covered.has(i)) continue;
-    const top = i * g.period;
-    const mid = top + g.asc - g.xh;
-    const base = top + g.asc;
-    const bottom = top + g.band;
-    inner += `M0 ${round(mid)}H${width}M0 ${round(base)}H${width}`;
-    if (!double) outer += `M0 ${round(top)}H${width}M0 ${round(bottom)}H${width}`;
-    if (sheetState.marks) {
-      const markTop = double ? mid : top, markBottom = double ? base : bottom;
-      for (let x = markStep; x < width - 2; x += markStep) marks += `M${round(x)} ${round(markTop)}V${round(markBottom)}`;
-    }
-  }
-  const stroke = Math.min(1.7, Math.max(1.1, g.band / 42));
   ruling.setAttribute('width', width);
   ruling.setAttribute('height', height);
   ruling.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  ruling.innerHTML =
-    (marks ? `<path d="${marks}" stroke="${MARK_INK}" stroke-width="1" fill="none"/>` : '') +
-    `<path d="${inner}" stroke="${LINE_INK.inner}" stroke-width="${stroke}" fill="none"/>` +
-    (outer ? `<path d="${outer}" stroke="${LINE_INK.outer}" stroke-width="${stroke}" fill="none"/>` : '');
-  sheetView.bands = bands;
-  fillPage(sheetView);
-  paintTracing(sheetView);
-  return checkFit(sheetView);
+  if (g.grid) {
+    // Squares: rows of whole squares across the middle of the page.
+    const left = round(g.gridLeft), right = round(g.gridLeft + g.cols * g.cell);
+    let squares = '';
+    for (let i = 0; i < bands; i++) {
+      if (covered.has(i)) continue;
+      const top = round(i * g.period), bottom = round(i * g.period + g.cell);
+      if (i === 0 || covered.has(i - 1)) squares += `M${left} ${top}H${right}`;
+      squares += `M${left} ${bottom}H${right}`;
+      for (let col = 0; col <= g.cols; col++) squares += `M${round(g.gridLeft + col * g.cell)} ${top}V${bottom}`;
+    }
+    const stroke = Math.min(1.4, Math.max(1, g.cell / 60));
+    ruling.innerHTML = `<path d="${squares}" stroke="${SQUARE_INK}" stroke-width="${stroke}" stroke-linecap="square" fill="none"/>`;
+  } else {
+    // Four lines: red top, blue body top, blue baseline, red bottom.
+    // Double line: just the two blue lines around the letter body.
+    const double = sheetState.ruling === 'double';
+    let outer = '', inner = '', marks = '';
+    const markStep = g.band * 0.62;
+    for (let i = 0; i < bands; i++) {
+      if (covered.has(i)) continue;
+      const top = i * g.period;
+      const mid = top + g.asc - g.xh;
+      const base = top + g.asc;
+      const bottom = top + g.band;
+      inner += `M0 ${round(mid)}H${width}M0 ${round(base)}H${width}`;
+      if (!double) outer += `M0 ${round(top)}H${width}M0 ${round(bottom)}H${width}`;
+      if (sheetState.marks) {
+        const markTop = double ? mid : top, markBottom = double ? base : bottom;
+        for (let x = markStep; x < width - 2; x += markStep) marks += `M${round(x)} ${round(markTop)}V${round(markBottom)}`;
+      }
+    }
+    const stroke = Math.min(1.7, Math.max(1.1, g.band / 42));
+    ruling.innerHTML =
+      (marks ? `<path d="${marks}" stroke="${MARK_INK}" stroke-width="1" fill="none"/>` : '') +
+      `<path d="${inner}" stroke="${LINE_INK.inner}" stroke-width="${stroke}" fill="none"/>` +
+      (outer ? `<path d="${outer}" stroke="${LINE_INK.outer}" stroke-width="${stroke}" fill="none"/>` : '');
+  }
 }
 
 // Exact height a block takes on the ruled lines (offsetHeight is rounded to whole pixels).
@@ -1278,8 +1495,34 @@ function fillPage(sheetView) {
   for (let i = copies.length; i < wanted; i++) {
     const copy = textBlock(sheetState, block, sheetView.g, sheetView.live);
     copy.classList.add('copy');
+    if (sheetView.g.grid) copy.firstChild.style.width = original.firstChild.style.width;
     anchor.after(copy);
     anchor = copy;
+  }
+}
+
+// Centred words on squares: a line with an odd number of squares left over would sit half a
+// square off the grid, so such a line is made one square narrower.
+function alignCells(sheetView) {
+  const { g, area, sheet: sheetState } = sheetView;
+  if (!g.grid) return;
+  const fullWidth = rowWidth(g);
+  const widths = new Map();
+  for (const blockNode of $$('.blk.cells:not(.copy)', area)) {
+    const words = blockNode.firstChild;
+    words.style.width = fullWidth + 'px';
+    let width = fullWidth;
+    if (sheetState.align === 'center' && blockNode.offsetHeight <= +blockNode.dataset.line + 0.5) {
+      charRange.selectNodeContents(words);
+      const scale = blockNode.getBoundingClientRect().width / blockNode.offsetWidth || 1;
+      const used = Math.round(charRange.getBoundingClientRect().width / scale / g.cell);
+      if ((g.cols - used) % 2) width = rowWidth(g, g.cols - 1);
+    }
+    words.style.width = width + 'px';
+    widths.set(blockNode.dataset.id, width);
+  }
+  for (const copy of $$('.blk.cells.copy', area)) {
+    if (widths.has(copy.dataset.id)) copy.firstChild.style.width = widths.get(copy.dataset.id) + 'px';
   }
 }
 
@@ -1373,7 +1616,9 @@ function syncText(typedInto) {
     const value = block.bind ? sheetState[block.bind] : block.text;
     if (blockNode.firstChild.textContent !== value) blockNode.firstChild.textContent = value;
   }
+  alignCells(view);
   fillPage(view);
+  drawRuling(view);
   paintTracing(view);
   checkFit(view);
   placeTools();
@@ -1658,7 +1903,13 @@ function syncPanel() {
   }
   $('#size').value = sheetState.size;
   $('#space').value = sheetState.space;
-  $('#size-out').textContent = `${sheetState.size} pt · lines ${Math.round(editor.view.g.band / PX_PER_MM)} mm tall`;
+  // Squares have no gap between rows and need no spacing marks.
+  const { g } = editor.view;
+  $('#space').closest('.slider').hidden = !!g.grid;
+  $('.panel [data-key="marks"]').closest('.check').hidden = !!g.grid;
+  $('#size-out').textContent = g.grid
+    ? `${sheetState.size} pt · squares ${Math.round(g.cell / PX_PER_MM)} mm`
+    : `${sheetState.size} pt · lines ${Math.round(g.band / PX_PER_MM)} mm tall`;
   for (const box of $$('.panel input[type="checkbox"][data-key]')) box.checked = !!sheetState[box.dataset.key];
   updatePrintLabel();
 }
@@ -2298,8 +2549,10 @@ function route() {
 
 function fontsReady() {
   if (!document.fonts || !document.fonts.load) return Promise.resolve();
-  const loads = Object.values(FONTS).map(font => document.fonts.load(`${font.weight} 40px ${font.css}`, 'Abgx'));
-  loads.push(document.fonts.load(`700 20px ${COMIC}`, 'Ab'));
+  const loads = Object.values(FONTS).map(font => document.fonts.load(`${font.weight} 40px ${font.css}`, 'Abgx0123456789'));
+  loads.push(document.fonts.load(`700 20px ${COMIC}`, 'Ab14'));
+  loads.push(document.fonts.load(`${CELL_FONT.weight} 40px ${CELL_FONT.css}`, 'A1'));
+  loads.push(...fontFaces.map(face => face.load()));
   loads.push(document.fonts.load('400 40px "Baloo Tamma 2"', 'ಕಅ')); // Kannada letters, so their heights are known
   loads.push(document.fonts.load('400 40px "Baloo 2"', 'कअ')); // and Hindi letters
 
@@ -2307,6 +2560,7 @@ function fontsReady() {
 }
 
 async function start() {
+  installFonts();
   buildPanel();
   setUpPictures();
   await Promise.all([fontsReady(), loadImages()]);
@@ -2320,11 +2574,15 @@ async function start() {
     placePictureTools();
   });
   if (document.fonts && document.fonts.addEventListener) {
-    document.fonts.addEventListener('loadingdone', () => {
-      if (!measureFonts()) return;
+    document.fonts.addEventListener('loadingdone', event => {
+      // Our own fonts change the shapes of 1 and 4 and the squares' layout without changing the line heights.
+      const ours = [...(event.fontfaces || [])].some(face => fontFaces.includes(face));
+      if (!measureFonts() && !ours) return;
       dotCache.clear();
       skeletonCache.clear();
       baselineCache.clear();
+      inkCache.clear();
+      spacingCache.clear();
       route();
     });
   }
